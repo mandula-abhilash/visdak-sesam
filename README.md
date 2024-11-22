@@ -1,220 +1,286 @@
-Here’s an updated and more detailed README for **Visdak SESAM**, incorporating the cleaned-up structure and ensuring clarity and usability.
-
----
-
 # Visdak SESAM
 
-A modular authentication and authorization solution supporting multiple databases and email providers. Built with scalability, flexibility, and TypeScript in mind.
+A pluggable authentication module with support for multiple databases and email providers.
 
 ---
 
 ## Features
 
-- 🌟 **Modular architecture** with an adapter pattern for database and email providers.
-- 🔄 **JWT-based authentication**, including access and refresh tokens.
-- 📧 **Email verification** using providers like Amazon SES or SMTP.
-- 🔑 Middleware for **protected routes** and **role-based access control**.
-- 💡 **TypeScript support** for strong typing and better developer experience.
-- ⚙️ Easily configurable settings.
+- Modular architecture with adapter pattern
+- Swappable database backends
+- Configurable email providers (e.g., AWS SES)
+- JWT-based authentication
+- Middleware for route protection and role-based access
+- Schema validation with `zod`
+- Customizable and extensible for various use cases
 
 ---
 
 ## Installation
 
-Install the module from the private repository:
-
 ```bash
-npm install visdak-auth
+npm install visdak-sesam
+```
+
+---
+
+## Configuration
+
+The module requires a configuration object for initialization:
+
+### Example Configuration
+
+```javascript
+const config = {
+  MONGODB_URI: "mongodb://localhost:27017/your-db",
+  JWT_SECRET: "your-jwt-secret",
+  REFRESH_TOKEN_SECRET: "your-refresh-token-secret",
+  accessTokenExpiry: "15m",
+  refreshTokenExpiry: "7d",
+  appUrl: "http://localhost:3000",
+  emailConfig: {
+    provider: "ses",
+    from: "noreply@yourdomain.com",
+    region: "us-east-1",
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    },
+  },
+};
 ```
 
 ---
 
 ## Usage
 
-### Basic Setup
+### Initialize the Authentication Module
 
-```typescript
-import express from 'express';
-import { createAuthModule } from 'visdak-auth';
+```javascript
+import express from "express";
+import { createAuthModule } from "visdak-sesam";
 
 const app = express();
 app.use(express.json());
 
-const authConfig = {
-  jwtSecret: process.env.JWT_SECRET!,
-  refreshTokenSecret: process.env.REFRESH_TOKEN_SECRET!,
-  accessTokenExpiry: '15m',
-  refreshTokenExpiry: '7d',
-  emailConfig: {
-    provider: 'ses',
-    from: 'noreply@yourdomain.com',
-    region: 'us-east-1',
-    credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-    },
-  },
-  appUrl: 'http://localhost:3000',
-};
+const authModule = createAuthModule(config);
 
-const { router, middleware } = createAuthModule(authConfig);
+// Mount authentication routes
+app.use("/auth", authModule.router);
 
-// Mount auth routes
-app.use('/auth', router);
-
-// Example: Protected route
-app.get('/protected', middleware.protect, (req, res) => {
-  res.json({ message: 'This is a protected route.' });
+// Example protected route
+app.get("/protected", authModule.middleware.protect, (req, res) => {
+  res.json({ message: "Protected route accessed!", user: req.user });
 });
 
-// Example: Admin-only route
-app.get('/admin', middleware.protect, middleware.requireAdmin, (req, res) => {
-  res.json({ message: 'This is an admin-only route.' });
+// Example admin-only route
+app.get(
+  "/admin",
+  authModule.middleware.protect,
+  authModule.middleware.admin,
+  (req, res) => {
+    res.json({ message: "Admin-only route accessed!", user: req.user });
+  }
+);
+
+// Start the server
+app.listen(3000, () => {
+  console.log("Server is running on http://localhost:3000");
 });
 ```
 
 ---
 
-### Email Providers
+## Endpoints and Usage
 
-#### Amazon SES Configuration:
-```typescript
-emailConfig: {
-  provider: 'ses',
-  from: 'noreply@yourdomain.com',
-  region: 'us-east-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-}
-```
+### 1. Register a User
 
-#### SMTP Configuration:
-```typescript
-emailConfig: {
-  provider: 'smtp',
-  from: 'noreply@yourdomain.com',
-  smtp: {
-    host: 'smtp.mailtrap.io',
-    port: 587,
-    auth: {
-      user: process.env.SMTP_USER!,
-      pass: process.env.SMTP_PASS!,
-    },
-  },
-}
-```
-
----
-
-## Custom Database Adapter
-
-Implement your own database backend by extending the `DatabaseAdapter` interface.
-
-```typescript
-import { DatabaseAdapter } from 'visdak-auth';
-
-export class PostgresAdapter implements DatabaseAdapter {
-  async findUserByEmail(email: string) {
-    // Query Postgres to find user by email
+- **Endpoint**: `POST /auth/register`
+- **Request Body**:
+  ```json
+  {
+    "name": "John Doe",
+    "email": "john@example.com",
+    "password": "password123"
   }
-
-  async createUser(userData) {
-    // Save user data to Postgres
+  ```
+- **Response**:
+  ```json
+  {
+    "status": "success",
+    "data": { "email": "john@example.com" },
+    "message": "Registration successful. Please verify your email."
   }
+  ```
 
-  // Implement other methods as required
-}
+---
+
+### 2. Login
+
+- **Endpoint**: `POST /auth/login`
+- **Request Body**:
+  ```json
+  {
+    "email": "john@example.com",
+    "password": "password123"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "accessToken": "jwt-access-token",
+      "refreshToken": "jwt-refresh-token",
+      "user": { "id": "user-id", "name": "John Doe", "email": "john@example.com", "role": "user" }
+    }
+  }
+  ```
+
+---
+
+### 3. Verify Email
+
+- **Endpoint**: `GET /auth/verify-email?token=<verification_token>`
+- **Response**:
+  ```json
+  {
+    "status": "success",
+    "message": "Email verified successfully"
+  }
+  ```
+
+---
+
+### 4. Forgot Password
+
+- **Endpoint**: `POST /auth/forgot-password`
+- **Request Body**:
+  ```json
+  {
+    "email": "john@example.com"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "status": "success",
+    "message": "Password reset email sent"
+  }
+  ```
+
+---
+
+### 5. Reset Password
+
+- **Endpoint**: `POST /auth/reset-password`
+- **Request Body**:
+  ```json
+  {
+    "token": "<password_reset_token>",
+    "newPassword": "newPassword123"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "status": "success",
+    "message": "Password reset successful"
+  }
+  ```
+
+---
+
+### 6. Refresh Token
+
+- **Endpoint**: `POST /auth/refresh-token`
+- **Request Body**:
+  ```json
+  {
+    "refreshToken": "jwt-refresh-token"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "status": "success",
+    "data": { "accessToken": "new-jwt-access-token" }
+  }
+  ```
+
+---
+
+## Protected and Admin Routes
+
+### Protected Route Example
+
+```javascript
+app.get("/protected", authModule.middleware.protect, (req, res) => {
+  res.json({ message: "This is a protected route", user: req.user });
+});
 ```
 
-Register your adapter during the module initialization:
+### Admin Route Example
 
-```typescript
-const authConfig = {
-  ...
-  databaseAdapter: new PostgresAdapter(),
-};
+```javascript
+app.get(
+  "/admin",
+  authModule.middleware.protect,
+  authModule.middleware.admin,
+  (req, res) => {
+    res.json({ message: "This is an admin-only route", user: req.user });
+  }
+);
 ```
 
 ---
 
-## Configuration Options
+## Validation
 
-| Option                | Type                | Description                              | Required |
-|-----------------------|---------------------|------------------------------------------|----------|
-| `jwtSecret`           | `string`           | Secret key for signing JWT tokens.       | ✅        |
-| `refreshTokenSecret`  | `string`           | Secret key for signing refresh tokens.   | ✅        |
-| `accessTokenExpiry`   | `string`           | Expiration for access tokens (e.g., '15m'). | ✅     |
-| `refreshTokenExpiry`  | `string`           | Expiration for refresh tokens (e.g., '7d'). | ✅     |
-| `emailConfig`         | `object`           | Email provider configuration.            | ✅        |
-| `appUrl`              | `string`           | Base URL of your app (used in email links). | ✅     |
-| `databaseAdapter`     | `DatabaseAdapter`  | Custom database adapter.                 | ✅        |
+The module uses `zod` for schema validation. 
 
----
+### Validation Schemas
 
-## API Routes
-
-| Route           | Method | Description            | Middleware        |
-|------------------|--------|------------------------|-------------------|
-| `/auth/login`    | POST   | User login             | -                 |
-| `/auth/register` | POST   | User registration      | -                 |
-| `/auth/refresh`  | POST   | Refresh access token   | -                 |
-| `/auth/logout`   | POST   | Logout user            | `middleware.protect` |
-| `/auth/verify`   | GET    | Email verification     | -                 |
+| Endpoint             | Schema               |
+|----------------------|----------------------|
+| `/auth/register`     | `registerSchema`     |
+| `/auth/login`        | `loginSchema`        |
+| `/auth/forgot-password` | `forgotPasswordSchema` |
+| `/auth/reset-password` | `resetPasswordSchema` |
+| `/auth/refresh-token` | `refreshTokenSchema` |
 
 ---
 
-## Response Structure
+## Error Handling
 
-### Success Response:
+Responses follow a consistent structure.
+
+### Success Response
+
 ```json
 {
   "status": "success",
-  "data": {
-    "token": "your-jwt-token"
-  },
+  "data": { "key": "value" },
   "message": "Operation successful"
 }
 ```
 
-### Error Response:
+### Error Response
+
 ```json
 {
   "status": "error",
-  "message": "An error occurred",
   "error": {
     "code": 400,
-    "details": "Invalid request payload"
+    "details": "Detailed error message"
   }
 }
 ```
 
 ---
 
-## Status Code Guidelines
+## Extensibility
 
-| Status Code | Description                |
-|-------------|----------------------------|
-| 200         | OK                         |
-| 201         | Created                    |
-| 400         | Bad Request                |
-| 401         | Unauthorized               |
-| 403         | Forbidden                  |
-| 404         | Not Found                  |
-| 409         | Conflict                   |
-| 500         | Internal Server Error      |
-
----
-
-## Future Enhancements
-
-- OAuth2 provider integration
-- Multi-factor authentication (MFA)
-- Rate limiting for login attempts
-
----
-
-## License
-
-MIT License - see the [LICENSE](LICENSE) file for details.
+- Replace database adapters (e.g., switch from Mongoose to PostgreSQL)
+- Support additional email providers by implementing new adapters
+- Add custom middleware for specialized use cases
