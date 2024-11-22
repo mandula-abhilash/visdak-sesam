@@ -1,14 +1,12 @@
-import { TokenService } from "../utils/token.js";
 import { createErrorResponse } from "../utils/response.js";
 
 /**
- * Middleware to protect routes and validate JWT tokens.
+ * Factory function to create the protect middleware.
  *
- * @param {Object} req - Express request object.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function.
+ * @param {Object} tokenService - Token service instance for token operations.
+ * @returns {Function} Middleware function to protect routes.
  */
-export const protect = (req, res, next) => {
+export const createProtectMiddleware = (tokenService) => (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -18,7 +16,7 @@ export const protect = (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1];
-    const decoded = TokenService().verifyToken(token, process.env.JWT_SECRET);
+    const decoded = tokenService.verifyToken(token, process.env.JWT_SECRET);
 
     req.user = decoded; // Attach user data to the request object
     next();
@@ -30,13 +28,11 @@ export const protect = (req, res, next) => {
 };
 
 /**
- * Middleware to restrict access to admin-only routes.
+ * Factory function to create the admin middleware.
  *
- * @param {Object} req - Express request object.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function.
+ * @returns {Function} Middleware function to restrict access to admin-only routes.
  */
-export const admin = (req, res, next) => {
+export const createAdminMiddleware = () => (req, res, next) => {
   if (req.user?.role !== "admin") {
     return res
       .status(403)

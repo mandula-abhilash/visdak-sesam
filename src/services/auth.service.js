@@ -1,12 +1,12 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { TokenService } from "../utils/token.js";
 
 /**
  * Factory function to create the authentication service.
  *
  * @param {Object} dbAdapter - Database adapter for user-related operations.
  * @param {Object} emailAdapter - Email adapter for sending emails.
+ * @param {Object} tokenService - Token service instance for token operations.
  * @param {Object} config - Configuration object for the service.
  * @param {string} config.jwtSecret - Secret key for signing JWT access tokens.
  * @param {string} config.refreshTokenSecret - Secret key for signing refresh tokens.
@@ -15,7 +15,7 @@ import { TokenService } from "../utils/token.js";
  * @param {Object} config.emailConfig - Configuration for email service.
  * @returns {Object} Authentication service with methods for various auth operations.
  */
-export const createAuthService = (dbAdapter, emailAdapter, config) => {
+export const createAuthService = (dbAdapter, emailAdapter, tokenService) => {
   /**
    * Registers a new user and sends a verification email.
    *
@@ -63,7 +63,6 @@ export const createAuthService = (dbAdapter, emailAdapter, config) => {
     if (!isPasswordValid) throw new Error("Invalid credentials");
 
     const tokenPayload = { userId: user.id, role: user.role };
-    const tokenService = TokenService(config);
 
     return {
       user: { ...user, password: undefined },
@@ -134,11 +133,11 @@ export const createAuthService = (dbAdapter, emailAdapter, config) => {
    * @throws {Error} If the token is invalid or the user does not exist.
    */
   const refreshToken = async (refreshToken) => {
-    const decoded = TokenService(config).verifyRefreshToken(refreshToken);
+    const decoded = tokenService.verifyRefreshToken(refreshToken);
     const user = await dbAdapter.findUserById(decoded.userId);
     if (!user) throw new Error("User not found");
 
-    return TokenService(config).generateAccessToken({
+    return tokenService.generateAccessToken({
       userId: user.id,
       role: user.role,
     });

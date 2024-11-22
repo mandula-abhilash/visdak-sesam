@@ -4,6 +4,7 @@ import { createMongooseAdapter } from "./adapters/mongoose.adapter.js";
 import { createSESAdapter } from "./adapters/ses.adapter.js";
 import { createAuthController } from "./controllers/auth.controller.js";
 import { createAuthMiddleware } from "./middleware/auth.middleware.js";
+import { createTokenService } from "./utils/token.js";
 
 /**
  * Initializes the authentication module.
@@ -34,10 +35,13 @@ export const createAuthModule = (config) => {
   }
   const emailAdapter = createSESAdapter(config);
 
+  // Initialize token service
+  const tokenService = createTokenService(config);
+
   // Initialize core services
-  const authService = createAuthService(dbAdapter, emailAdapter, config);
+  const authService = createAuthService(dbAdapter, emailAdapter, tokenService);
   const authController = createAuthController(authService);
-  const { protect, admin } = createAuthMiddleware(config);
+  const { protect, admin } = createAuthMiddleware(tokenService);
 
   // Define and set up routes
   const router = Router();
