@@ -2,7 +2,8 @@
   "name": "visdak-sesam",
   "version": "1.0.0",
   "description": "Pluggable authentication module with database and email provider flexibility",
-  "main": "index.js",
+  "main": "src/index.js",
+  "type": "module",
   "scripts": {
     "build": "echo 'Build step skipped as this is now a JavaScript project'",
     "test": "jest",
