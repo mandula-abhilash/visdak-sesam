@@ -24,6 +24,7 @@ export const createSESAdapter = (config) => {
    *
    * @param {string} email - Recipient's email address.
    * @param {string} token - Verification token.
+   * @returns {Promise<void>} - Resolves when the email is sent.
    */
   const sendVerificationEmail = async (email, token) => {
     const verificationLink = `${config.appUrl}/auth/verify-email?token=${token}`;
@@ -45,7 +46,16 @@ export const createSESAdapter = (config) => {
       },
     });
 
-    await client.send(command);
+    try {
+      await client.send(command);
+      console.log(`Verification email sent to ${email}`);
+    } catch (error) {
+      console.error(
+        `Failed to send verification email to ${email}:`,
+        error.message
+      );
+      throw new Error("Failed to send verification email");
+    }
   };
 
   /**
@@ -53,6 +63,7 @@ export const createSESAdapter = (config) => {
    *
    * @param {string} email - Recipient's email address.
    * @param {string} token - Password reset token.
+   * @returns {Promise<void>} - Resolves when the email is sent.
    */
   const sendPasswordResetEmail = async (email, token) => {
     const resetLink = `${config.appUrl}/auth/reset-password?token=${token}`;
@@ -75,7 +86,16 @@ export const createSESAdapter = (config) => {
       },
     });
 
-    await client.send(command);
+    try {
+      await client.send(command);
+      console.log(`Password reset email sent to ${email}`);
+    } catch (error) {
+      console.error(
+        `Failed to send password reset email to ${email}:`,
+        error.message
+      );
+      throw new Error("Failed to send password reset email");
+    }
   };
 
   return {
