@@ -1,4 +1,5 @@
 import { Schema, model } from "mongoose";
+import bcrypt from "bcryptjs";
 
 /**
  * Mongoose schema for the User collection.
@@ -27,11 +28,15 @@ const userSchema = new Schema(
       unique: true,
       lowercase: true,
       trim: true,
+      match: [
+        /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+        "Please provide a valid email address",
+      ],
     },
     password: {
       type: String,
       required: [true, "Password is required"],
-      minlength: 8,
+      minlength: [8, "Password must be at least 8 characters long"],
       select: false,
     },
     role: {
@@ -55,9 +60,40 @@ const userSchema = new Schema(
   },
   {
     timestamps: true,
-    collection: "users", // Name of the MongoDB collection
+    collection: "users",
+    toJSON: {
+      virtuals: true,
+      transform: (doc, ret) => {
+        delete ret.password; // Remove password field when converting to JSON
+        delete ret.verificationToken; // Optionally remove sensitive fields
+        delete ret.passwordResetToken;
+        return ret;
+      },
+    },
+    toObject: {
+      virtuals: true,
+    },
   }
 );
+
+/**
+ * Middleware to hash the password before saving the document.
+ */
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next(); // Only hash if password is modified
+  this.password = await bcrypt.hash(this.password, 10); // Hash password
+  next();
+});
+
+/**
+ * Instance method to compare passwords.
+ *
+ * @param {String} candidatePassword - The plain text password to compare.
+ * @returns {Promise<Boolean>} - True if passwords match, false otherwise.
+ */
+userSchema.methods.comparePassword = async function (candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
+};
 
 /**
  * Mongoose model for the User schema.

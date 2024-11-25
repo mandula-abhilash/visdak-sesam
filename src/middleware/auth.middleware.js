@@ -9,6 +9,8 @@ import { createErrorResponse } from "../utils/response.js";
 export const createProtectMiddleware = (tokenService) => (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
+
+    // Check if the authorization header is present and properly formatted
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res
         .status(401)
@@ -18,9 +20,16 @@ export const createProtectMiddleware = (tokenService) => (req, res, next) => {
     const token = authHeader.split(" ")[1];
     const decoded = tokenService.verifyToken(token, process.env.JWT_SECRET);
 
-    req.user = decoded; // Attach user data to the request object
+    if (!decoded) {
+      return res
+        .status(401)
+        .json(createErrorResponse(401, "Invalid or expired token"));
+    }
+
+    req.user = decoded;
     next();
   } catch (error) {
+    console.error("Protect Middleware Error:", error.message);
     return res
       .status(401)
       .json(createErrorResponse(401, "Invalid or expired token"));
@@ -33,10 +42,24 @@ export const createProtectMiddleware = (tokenService) => (req, res, next) => {
  * @returns {Function} Middleware function to restrict access to admin-only routes.
  */
 export const createAdminMiddleware = () => (req, res, next) => {
-  if (req.user?.role !== "admin") {
+  try {
+    // Check if the user role is 'admin'
+    if (req.user?.role !== "admin") {
+      return res
+        .status(403)
+        .json(createErrorResponse(403, "Admin access required"));
+    }
+
+    next();
+  } catch (error) {
+    console.error("Admin Middleware Error:", error.message);
     return res
-      .status(403)
-      .json(createErrorResponse(403, "Admin access required"));
+      .status(500)
+      .json(
+        createErrorResponse(
+          500,
+          "An error occurred while checking admin access"
+        )
+      );
   }
-  next();
 };
