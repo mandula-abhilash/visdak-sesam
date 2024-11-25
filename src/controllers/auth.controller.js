@@ -1,99 +1,224 @@
-import {
-  createSuccessResponse,
-  createErrorResponse,
-} from "../utils/response.js";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { UserModel } from "../models/user.model.js";
+import { emailService } from "../services/email.service.js";
+import crypto from "crypto";
 
-/**
- * Factory function to create the authentication controller.
- *
- * @param {Object} authService - Authentication service instance.
- * @returns {Object} Authentication controller with route handlers.
- */
-export const createAuthController = (authService) => {
-  const register = async (req, res) => {
-    try {
-      const { name, email, password } = req.body;
-      const user = await authService.register(name, email, password);
-      res
-        .status(201)
-        .json(
-          createSuccessResponse(
-            { email: user.email },
-            "User registered successfully."
-          )
-        );
-    } catch (error) {
-      res.status(400).json(createErrorResponse(400, error.message));
+const generateToken = (payload, secret, expiresIn) => {
+  return jwt.sign(payload, secret, { expiresIn });
+};
+
+// Register controller
+export const register = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    const existingUser = await UserModel.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        status: "error",
+        error: { code: 400, details: "Email already registered" },
+      });
     }
-  };
 
-  const login = async (req, res) => {
-    try {
-      const { email, password } = req.body;
-      const { user, accessToken, refreshToken } = await authService.login(
-        email,
-        password
-      );
-      const { password: _, ...userWithoutPassword } = user.toObject();
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-      res.json(
-        createSuccessResponse({
-          user: userWithoutPassword,
-          accessToken,
-          refreshToken,
-        })
-      );
-    } catch (error) {
-      res.status(401).json(createErrorResponse(401, error.message));
+    const user = await UserModel.create({
+      name,
+      email,
+      password: hashedPassword,
+      verificationToken,
+      isVerified: false,
+      role: "user",
+    });
+
+    await emailService.sendVerificationEmail(email, verificationToken);
+
+    res.status(201).json({
+      status: "success",
+      data: { email: user.email },
+      message: "Registration successful. Please verify your email.",
+    });
+  } catch (error) {
+    res.status(400).json({
+      status: "error",
+      error: { code: 400, details: error.message },
+    });
+  }
+};
+
+// Login controller
+export const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await UserModel.findOne({ email }).select("+password");
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(401).json({
+        status: "error",
+        error: { code: 401, details: "Invalid email or password" },
+      });
     }
-  };
 
-  const verifyEmail = async (req, res) => {
-    try {
-      const { token } = req.query;
-      await authService.verifyEmail(token);
-      res.json(createSuccessResponse(null, "Email verified successfully."));
-    } catch (error) {
-      res.status(400).json(createErrorResponse(400, error.message));
+    if (!user.isVerified) {
+      return res.status(401).json({
+        status: "error",
+        error: { code: 401, details: "Please verify your email first" },
+      });
     }
-  };
 
-  const forgotPassword = async (req, res) => {
-    try {
-      const { email } = req.body;
-      await authService.forgotPassword(email);
-      res.json(createSuccessResponse(null, "Password reset email sent."));
-    } catch (error) {
-      res.status(404).json(createErrorResponse(404, error.message));
+    const tokenPayload = { userId: user._id, role: user.role };
+    const accessToken = generateToken(
+      tokenPayload,
+      process.env.JWT_SECRET,
+      "15m"
+    );
+    const refreshToken = generateToken(
+      tokenPayload,
+      process.env.REFRESH_TOKEN_SECRET,
+      "7d"
+    );
+
+    const { password: _, ...userWithoutPassword } = user.toObject();
+    res.json({
+      status: "success",
+      data: { user: userWithoutPassword, accessToken, refreshToken },
+    });
+  } catch (error) {
+    res.status(401).json({
+      status: "error",
+      error: { code: 401, details: error.message },
+    });
+  }
+};
+
+// Verify Email controller
+export const verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.query;
+    const user = await UserModel.findOne({ verificationToken: token });
+
+    if (!user) {
+      return res.status(400).json({
+        status: "error",
+        error: { code: 400, details: "Invalid or expired verification token" },
+      });
     }
-  };
 
-  const resetPassword = async (req, res) => {
-    try {
-      const { token, newPassword } = req.body;
-      await authService.resetPassword(token, newPassword);
-      res.json(createSuccessResponse(null, "Password reset successfully."));
-    } catch (error) {
-      res.status(400).json(createErrorResponse(400, error.message));
+    await UserModel.findByIdAndUpdate(user._id, {
+      isVerified: true,
+      verificationToken: null,
+    });
+
+    res.json({
+      status: "success",
+      message: "Email verified successfully",
+    });
+  } catch (error) {
+    res.status(400).json({
+      status: "error",
+      error: { code: 400, details: error.message },
+    });
+  }
+};
+
+// Forgot Password controller
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await UserModel.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        status: "error",
+        error: { code: 404, details: "No user found with this email" },
+      });
     }
-  };
 
-  const refreshToken = async (req, res) => {
-    try {
-      const { refreshToken } = req.body;
-      const newAccessToken = await authService.refreshToken(refreshToken);
-      res.json(createSuccessResponse({ accessToken: newAccessToken }));
-    } catch (error) {
-      res.status(401).json(createErrorResponse(401, error.message));
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    await UserModel.findByIdAndUpdate(user._id, {
+      passwordResetToken: resetToken,
+      passwordResetExpires: new Date(Date.now() + 3600000), // 1 hour
+    });
+
+    await emailService.sendPasswordResetEmail(email, resetToken);
+
+    res.json({
+      status: "success",
+      message: "Password reset email sent",
+    });
+  } catch (error) {
+    res.status(404).json({
+      status: "error",
+      error: { code: 404, details: error.message },
+    });
+  }
+};
+
+// Reset Password controller
+export const resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    const user = await UserModel.findOne({
+      passwordResetToken: token,
+      passwordResetExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        status: "error",
+        error: { code: 400, details: "Invalid or expired reset token" },
+      });
     }
-  };
 
-  return {
-    register,
-    login,
-    verifyEmail,
-    forgotPassword,
-    resetPassword,
-    refreshToken,
-  };
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await UserModel.findByIdAndUpdate(user._id, {
+      password: hashedPassword,
+      passwordResetToken: null,
+      passwordResetExpires: null,
+    });
+
+    res.json({
+      status: "success",
+      message: "Password reset successfully",
+    });
+  } catch (error) {
+    res.status(400).json({
+      status: "error",
+      error: { code: 400, details: error.message },
+    });
+  }
+};
+
+// Refresh Token controller
+export const refreshToken = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+    const user = await UserModel.findById(decoded.userId);
+
+    if (!user) {
+      return res.status(401).json({
+        status: "error",
+        error: { code: 401, details: "User not found" },
+      });
+    }
+
+    const accessToken = generateToken(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      "15m"
+    );
+
+    res.json({
+      status: "success",
+      data: { accessToken },
+    });
+  } catch (error) {
+    res.status(401).json({
+      status: "error",
+      error: { code: 401, details: error.message },
+    });
+  }
 };
