@@ -1,14 +1,11 @@
 /**
  * Cookie configuration for different environments
  */
-export const getCookieConfig = (
-  isProduction = process.env.NODE_ENV === "production"
-) => ({
+export const getCookieConfig = () => ({
   httpOnly: true,
-  secure: isProduction,
-  sameSite: isProduction ? "strict" : "lax",
+  secure: true,
+  sameSite: "strict",
   path: "/",
-  // Domain is automatically set by the browser based on the current domain
 });
 
 /**
