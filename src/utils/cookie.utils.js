@@ -3,8 +3,8 @@
  */
 export const getCookieConfig = () => ({
   httpOnly: true,
-  secure: true,
-  sameSite: "strict",
+  secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+  sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax", // Use lax in development to allow cross-origin cookies
   path: "/",
 });
 
