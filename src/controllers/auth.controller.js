@@ -1,12 +1,9 @@
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import { UserModel } from "../models/user.model.js";
 import { emailService } from "../services/email.service.js";
+import { generateTokens, verifyToken } from "../utils/token.utils.js";
+import { setAuthCookies, clearAuthCookies } from "../utils/cookie.utils.js";
 import crypto from "crypto";
-
-const generateToken = (payload, secret, expiresIn) => {
-  return jwt.sign(payload, secret, { expiresIn });
-};
 
 // Register controller
 export const register = async (req, res) => {
@@ -69,21 +66,15 @@ export const login = async (req, res) => {
     }
 
     const tokenPayload = { userId: user._id, role: user.role };
-    const accessToken = generateToken(
-      tokenPayload,
-      process.env.JWT_SECRET,
-      "15m"
-    );
-    const refreshToken = generateToken(
-      tokenPayload,
-      process.env.REFRESH_TOKEN_SECRET,
-      "7d"
-    );
+    const { accessToken, refreshToken } = generateTokens(tokenPayload);
+
+    // Set HTTP-only cookies
+    setAuthCookies(res, accessToken, refreshToken);
 
     const { password: _, ...userWithoutPassword } = user.toObject();
     res.json({
       status: "success",
-      data: { user: userWithoutPassword, accessToken, refreshToken },
+      data: { user: userWithoutPassword },
     });
   } catch (error) {
     res.status(401).json({
@@ -194,8 +185,16 @@ export const resetPassword = async (req, res) => {
 // Refresh Token controller
 export const refreshToken = async (req, res) => {
   try {
-    const { refreshToken } = req.body;
-    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+    const token = req.cookies?.refreshToken;
+
+    if (!token) {
+      return res.status(401).json({
+        status: "error",
+        error: { code: 401, details: "Refresh token not found" },
+      });
+    }
+
+    const decoded = verifyToken(token, process.env.REFRESH_TOKEN_SECRET);
     const user = await UserModel.findById(decoded.userId);
 
     if (!user) {
@@ -205,15 +204,16 @@ export const refreshToken = async (req, res) => {
       });
     }
 
-    const accessToken = generateToken(
-      { userId: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      "15m"
-    );
+    const tokenPayload = { userId: user._id, role: user.role };
+    const { accessToken, refreshToken: newRefreshToken } =
+      generateTokens(tokenPayload);
+
+    // Set new HTTP-only cookies
+    setAuthCookies(res, accessToken, newRefreshToken);
 
     res.json({
       status: "success",
-      data: { accessToken },
+      message: "Tokens refreshed successfully",
     });
   } catch (error) {
     res.status(401).json({
@@ -221,4 +221,14 @@ export const refreshToken = async (req, res) => {
       error: { code: 401, details: error.message },
     });
   }
+};
+
+// Logout controller
+export const logout = async (req, res) => {
+  clearAuthCookies(res);
+
+  res.json({
+    status: "success",
+    message: "Logged out successfully",
+  });
 };

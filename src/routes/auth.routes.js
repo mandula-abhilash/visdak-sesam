@@ -5,7 +5,6 @@ import {
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
-  refreshTokenSchema,
 } from "../schemas/auth.schema.js";
 import {
   register,
@@ -14,6 +13,7 @@ import {
   forgotPassword,
   resetPassword,
   refreshToken,
+  logout,
 } from "../controllers/auth.controller.js";
 
 const router = Router();
@@ -32,10 +32,7 @@ router.post(
   validateRequest(resetPasswordSchema),
   resetPassword
 );
-router.post(
-  "/refresh-token",
-  validateRequest(refreshTokenSchema),
-  refreshToken
-);
+router.post("/refresh-token", refreshToken);
+router.post("/logout", logout);
 
 export const authRouter = router;
