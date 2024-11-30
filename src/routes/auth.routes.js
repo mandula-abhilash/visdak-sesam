@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { protect } from "./../middleware/auth.middleware";
+import { protect } from "./../middleware/auth.middleware.js";
 import { validateRequest } from "../middleware/validation.middleware.js";
 import {
   registerSchema,
