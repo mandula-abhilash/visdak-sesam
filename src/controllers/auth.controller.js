@@ -235,7 +235,7 @@ export const logout = async (req, res) => {
 
 export const session = async (req, res) => {
   try {
-    const user = await UserModel.findById(req.user._id).select("-password");
+    const user = await UserModel.findById(req.user.userId).select("-password");
 
     if (!user) {
       return res.status(404).json({
