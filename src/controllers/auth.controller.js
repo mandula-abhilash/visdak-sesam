@@ -232,3 +232,26 @@ export const logout = async (req, res) => {
     message: "Logged out successfully",
   });
 };
+
+export const session = async (req, res) => {
+  try {
+    const user = await UserModel.findById(req.user._id).select("-password");
+
+    if (!user) {
+      return res.status(404).json({
+        status: "error",
+        error: { code: 404, details: "User not found" },
+      });
+    }
+
+    res.json({
+      status: "success",
+      data: { user },
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      error: { code: 500, details: error.message },
+    });
+  }
+};

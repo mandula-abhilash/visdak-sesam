@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { protect } from "./../middleware/auth.middleware";
 import { validateRequest } from "../middleware/validation.middleware.js";
 import {
   registerSchema,
@@ -14,6 +15,7 @@ import {
   resetPassword,
   refreshToken,
   logout,
+  session,
 } from "../controllers/auth.controller.js";
 
 const router = Router();
@@ -34,5 +36,7 @@ router.post(
 );
 router.post("/refresh-token", refreshToken);
 router.post("/logout", logout);
+
+router.get("/session", protect, session);
 
 export const authRouter = router;
