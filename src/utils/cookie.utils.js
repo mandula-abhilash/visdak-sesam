@@ -1,12 +1,16 @@
 /**
  * Cookie configuration for different environments
  */
-export const getCookieConfig = () => ({
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production", // Use secure cookies in production
-  sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax", // Use lax in development to allow cross-origin cookies
-  path: "/",
-});
+export const getCookieConfig = () => {
+  const isProduction = process.env.NODE_ENV === "production";
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "strict" : "lax",
+    domain: isProduction ? ".visdak.com" : undefined,
+    path: "/",
+  };
+};
 
 /**
  * Sets authentication cookies in the response
@@ -19,14 +23,12 @@ export const setAuthCookies = (res, accessToken, refreshToken) => {
 
   res.cookie("accessToken", accessToken, {
     ...cookieConfig,
-    maxAge: parseInt(process.env.ACCESS_TOKEN_EXPIRY_MS || 15 * 60 * 1000), // 15 minutes in milliseconds
+    maxAge: parseInt(process.env.ACCESS_TOKEN_EXPIRY * 1000), // 15 minutes in milliseconds
   });
 
   res.cookie("refreshToken", refreshToken, {
     ...cookieConfig,
-    maxAge: parseInt(
-      process.env.REFRESH_TOKEN_EXPIRY_MS || 7 * 24 * 60 * 60 * 1000
-    ), // 7 days in milliseconds
+    maxAge: parseInt(process.env.REFRESH_TOKEN_EXPIRY * 1000), // 7 days in milliseconds
   });
 };
 
@@ -37,13 +39,6 @@ export const setAuthCookies = (res, accessToken, refreshToken) => {
 export const clearAuthCookies = (res) => {
   const cookieConfig = getCookieConfig();
 
-  res.cookie("accessToken", "", {
-    ...cookieConfig,
-    maxAge: 0,
-  });
-
-  res.cookie("refreshToken", "", {
-    ...cookieConfig,
-    maxAge: 0,
-  });
+  res.clearCookie("accessToken", cookieConfig);
+  res.clearCookie("refreshToken", cookieConfig);
 };

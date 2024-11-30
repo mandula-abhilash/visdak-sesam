@@ -37,14 +37,5 @@ export const verifyToken = (token, secret) => {
  * @returns {string|null} Extracted token or null
  */
 export const extractToken = (req) => {
-  if (req.cookies?.accessToken) {
-    return req.cookies.accessToken;
-  }
-
-  const authHeader = req.headers.authorization;
-  if (authHeader?.startsWith("Bearer ")) {
-    return authHeader.split(" ")[1];
-  }
-
-  return null;
+  return req.cookies?.accessToken || null;
 };

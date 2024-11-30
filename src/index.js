@@ -8,6 +8,8 @@ export const createAuthModule = async (config) => {
     "MONGODB_URI",
     "JWT_SECRET",
     "REFRESH_TOKEN_SECRET",
+    "ACCESS_TOKEN_EXPIRY",
+    "REFRESH_TOKEN_EXPIRY",
     "emailConfig",
     "appUrl",
   ];
@@ -19,13 +21,18 @@ export const createAuthModule = async (config) => {
 
   // Set environment variables from config
   process.env.MONGODB_URI = config.MONGODB_URI;
+
   process.env.JWT_SECRET = config.JWT_SECRET;
   process.env.REFRESH_TOKEN_SECRET = config.REFRESH_TOKEN_SECRET;
+  process.env.ACCESS_TOKEN_EXPIRY = config.ACCESS_TOKEN_EXPIRY;
+  process.env.REFRESH_TOKEN_EXPIRY = config.REFRESH_TOKEN_EXPIRY;
+
   process.env.AWS_REGION = config.emailConfig.region;
   process.env.AWS_ACCESS_KEY_ID = config.emailConfig.credentials.accessKeyId;
   process.env.AWS_SECRET_ACCESS_KEY =
     config.emailConfig.credentials.secretAccessKey;
   process.env.SES_EMAIL_FROM = config.emailConfig.from;
+
   process.env.APP_URL = config.appUrl;
 
   // Connect to MongoDB
