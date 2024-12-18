@@ -1,3 +1,5 @@
+import ms from "ms";
+
 /**
  * Cookie configuration for different environments
  */
@@ -23,12 +25,12 @@ export const setAuthCookies = (res, accessToken, refreshToken) => {
 
   res.cookie("accessToken", accessToken, {
     ...cookieConfig,
-    maxAge: parseInt(process.env.ACCESS_TOKEN_EXPIRY * 1000), // 15 minutes in milliseconds
+    maxAge: ms(process.env.ACCESS_TOKEN_EXPIRY),
   });
 
   res.cookie("refreshToken", refreshToken, {
     ...cookieConfig,
-    maxAge: parseInt(process.env.REFRESH_TOKEN_EXPIRY * 1000), // 7 days in milliseconds
+    maxAge: ms(process.env.REFRESH_TOKEN_EXPIRY),
   });
 };
 
