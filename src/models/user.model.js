@@ -60,18 +60,14 @@ const userSchema = new Schema(
   },
   {
     timestamps: true,
-    collection: "users",
+    collection: "vd_sesam_users",
     toJSON: {
-      virtuals: true,
       transform: (doc, ret) => {
         delete ret.password; // Remove password field when converting to JSON
         delete ret.verificationToken; // Optionally remove sensitive fields
         delete ret.passwordResetToken;
         return ret;
       },
-    },
-    toObject: {
-      virtuals: true,
     },
   }
 );

@@ -22,9 +22,13 @@ export const createAuthModule = async () => {
   );
   if (missingVars.length > 0) {
     throw new Error(
-      `Missing required environment variables: ${missingVars.join(", ")}`
+      `SESAM : Missing required environment variables: ${missingVars.join(
+        ", "
+      )}`
     );
   }
+
+  console.log("SESAM : Environment variables loaded successfully!");
 
   // Connect to MongoDB
   try {
