@@ -27,7 +27,7 @@ export const emailService = {
       "Verify your email address",
       `<h1>Welcome!</h1>
        <p>Please verify your email address by clicking the link below:</p>
-       <a href="${process.env.APP_URL}/auth/verify-email?token=${token}">Verify Email</a>`
+       <a href="${process.env.APP_URL}/api/auth/verify-email?token=${token}">Verify Email</a>`
     );
   },
 
@@ -37,7 +37,7 @@ export const emailService = {
       "Reset your password",
       `<h1>Password Reset Request</h1>
        <p>Click the link below to reset your password:</p>
-       <a href="${process.env.APP_URL}/auth/reset-password?token=${token}">Reset Password</a>
+       <a href="${process.env.APP_URL}/api/auth/reset-password?token=${token}">Reset Password</a>
        <p>This link will expire in 1 hour.</p>`
     );
   },
