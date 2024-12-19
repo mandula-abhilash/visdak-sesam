@@ -5,9 +5,12 @@ import mongoose from "mongoose";
 import { authRouter } from "./routes/auth.routes.js";
 import { protect, admin } from "./middleware/auth.middleware.js";
 
-export const createAuthModule = async () => {
-  // Validate required environment variables
-  const requiredEnvVars = [
+/**
+ * Validate required environment variables
+ * @throws {Error} If any required variable is missing
+ */
+const validateEnvVariables = () => {
+  const requiredVariables = [
     "MONGODB_URI",
     "JWT_SECRET",
     "REFRESH_TOKEN_SECRET",
@@ -20,32 +23,50 @@ export const createAuthModule = async () => {
     "APP_URL",
   ];
 
-  const missingVars = requiredEnvVars.filter(
-    (varName) => !process.env[varName]
-  );
-  if (missingVars.length > 0) {
-    throw new Error(
-      `SESAM : Missing required environment variables: ${missingVars.join(
-        ", "
-      )}`
-    );
-  }
-
-  console.log("SESAM : Environment variables loaded successfully!");
-
-  // Connect to MongoDB
-  try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log("Connected to MongoDB successfully");
-  } catch (error) {
-    console.error("MongoDB connection error:", error);
-    throw error;
-  }
-
-  return {
-    router: authRouter,
-    middleware: { protect, admin },
-  };
+  requiredVariables.forEach((variable) => {
+    if (!process.env[variable]) {
+      throw new Error(
+        `SESAM : Missing required environment variable: ${variable}`
+      );
+    }
+  });
 };
 
+// Validate environment variables on module load
+validateEnvVariables();
+
+/**
+ * Connect to MongoDB
+ * @throws {Error} If MongoDB connection fails
+ */
+const connectToMongoDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log("SESAM : Connected to MongoDB successfully!");
+  } catch (error) {
+    console.error("SESAM : MongoDB connection error:", error.message);
+    process.exit(1);
+  }
+};
+
+// Establish MongoDB connection on module load
+connectToMongoDB();
+
+/**
+ * Exports all the routes and middleware in one place
+ * @returns {Object} - Object containing router and middleware
+ */
+const visdakSesamModule = () => ({
+  authRoutes: authRouter,
+  middleware: { protect, admin },
+});
+
+// Log success message for debugging (optional)
+console.log(
+  "SESAM : Environment variables and MongoDB connection initialized successfully!"
+);
+
+export default visdakSesamModule;
+
+// Export user model for external usage
 export * from "./models/user.model.js";
