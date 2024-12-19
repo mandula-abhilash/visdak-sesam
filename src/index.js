@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import mongoose from "mongoose";
 import { authRouter } from "./routes/auth.routes.js";
 import { protect, admin } from "./middleware/auth.middleware.js";
