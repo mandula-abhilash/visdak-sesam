@@ -4,6 +4,7 @@ dotenv.config();
 import mongoose from "mongoose";
 import { authRouter } from "./routes/auth.routes.js";
 import { protect, admin } from "./middleware/auth.middleware.js";
+import { emailService } from "./services/email.service.js";
 
 /**
  * Validate required environment variables
@@ -53,15 +54,17 @@ const connectToMongoDB = async () => {
 connectToMongoDB();
 
 /**
- * Exports all the routes and middleware in one place
- * @returns {Object} - Object containing router and middleware
+ * Exports all the routes, middleware and configuration methods
+ * @returns {Object} - Object containing router, middleware and configuration methods
  */
 const visdakSesamModule = () => ({
   authRoutes: authRouter,
   middleware: { protect, admin },
+  config: {
+    setEmailTemplates: emailService.setTemplates,
+  },
 });
 
-// Log success message for debugging (optional)
 console.log(
   "SESAM : Environment variables and MongoDB connection initialized successfully!"
 );

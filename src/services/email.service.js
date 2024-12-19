@@ -1,4 +1,15 @@
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
+import { verificationTemplate } from "../templates/verification.template.js";
+import { passwordResetTemplate } from "../templates/password-reset.template.js";
+
+// Default email templates
+const defaultTemplates = {
+  verification: verificationTemplate,
+  passwordReset: passwordResetTemplate,
+};
+
+// Store custom templates
+let customTemplates = { ...defaultTemplates };
 
 const sesClient = new SESClient({
   region: process.env.AWS_REGION,
@@ -21,24 +32,21 @@ const sendEmail = async (to, subject, html) => {
 };
 
 export const emailService = {
+  // Method to set custom email templates
+  setTemplates: (templates) => {
+    customTemplates = {
+      ...defaultTemplates,
+      ...templates,
+    };
+  },
+
   sendVerificationEmail: async (email, token) => {
-    await sendEmail(
-      email,
-      "Verify your email address",
-      `<h1>Welcome!</h1>
-       <p>Please verify your email address by clicking the link below:</p>
-       <a href="${process.env.APP_URL}/api/auth/verify-email?token=${token}">Verify Email</a>`
-    );
+    const template = customTemplates.verification(token);
+    await sendEmail(email, template.subject, template.html);
   },
 
   sendPasswordResetEmail: async (email, token) => {
-    await sendEmail(
-      email,
-      "Reset your password",
-      `<h1>Password Reset Request</h1>
-       <p>Click the link below to reset your password:</p>
-       <a href="${process.env.APP_URL}/api/auth/reset-password?token=${token}">Reset Password</a>
-       <p>This link will expire in 1 hour.</p>`
-    );
+    const template = customTemplates.passwordReset(token);
+    await sendEmail(email, template.subject, template.html);
   },
 };
