@@ -14,7 +14,7 @@ export const styles = {
     `,
   title: `
       color: #333333;
-      font-size: 24px;
+      font-size: 18px;
       font-weight: 600;
       margin: 0;
       padding: 0;

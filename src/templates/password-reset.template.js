@@ -12,7 +12,7 @@ export const passwordResetTemplate = (token) => ({
         <p>We received a request to reset your password. Click the button below to create a new password:</p>
         
         <div style="text-align: center;">
-          <a href="${process.env.APP_URL}/api/auth/reset-password?token=${token}" 
+          <a href="${process.env.CLIENT_URL}/auth/reset-password?token=${token}" 
              style="${styles.button}">
             Reset Password
           </a>
@@ -23,9 +23,9 @@ export const passwordResetTemplate = (token) => ({
           <br><br>
           If the button above doesn't work, copy and paste this link into your browser:
           <br>
-          <a href="${process.env.APP_URL}/api/auth/reset-password?token=${token}" 
+          <a href="${process.env.CLIENT_URL}/auth/reset-password?token=${token}" 
              style="${styles.link}">
-            ${process.env.APP_URL}/api/auth/reset-password?token=${token}
+            ${process.env.CLIENT_URL}/auth/reset-password?token=${token}
           </a>
         </p>
         

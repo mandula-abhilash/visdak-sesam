@@ -12,7 +12,7 @@ export const verificationTemplate = (token, name) => ({
         <p>Thank you for signing up! Please verify your email address to get started.</p>
         
         <div style="text-align: center;">
-          <a href="${process.env.APP_URL}/api/auth/verify-email?token=${token}" 
+          <a href="${process.env.CLIENT_URL}/auth/verify-email?token=${token}" 
              style="${styles.button}">
             Verify Email Address
           </a>
@@ -21,9 +21,9 @@ export const verificationTemplate = (token, name) => ({
         <p style="${styles.note}">
           If the button above doesn't work, copy and paste this link into your browser:
           <br>
-          <a href="${process.env.APP_URL}/api/auth/verify-email?token=${token}" 
+          <a href="${process.env.CLIENT_URL}/auth/verify-email?token=${token}" 
              style="${styles.link}">
-            ${process.env.APP_URL}/api/auth/verify-email?token=${token}
+            ${process.env.CLIENT_URL}/auth/verify-email?token=${token}
           </a>
         </p>
       </div>
