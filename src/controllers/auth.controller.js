@@ -51,7 +51,7 @@ export const register = async (req, res) => {
         lastVerificationEmailSent: new Date(),
       });
 
-      await emailService.sendVerificationEmail(email, verificationToken);
+      await emailService.sendVerificationEmail(email, verificationToken, name);
 
       return res.status(200).json({
         status: "success",
@@ -86,7 +86,7 @@ export const register = async (req, res) => {
       role: "user",
     });
 
-    await emailService.sendVerificationEmail(email, verificationToken);
+    await emailService.sendVerificationEmail(email, verificationToken, name);
 
     res.status(201).json({
       status: "success",

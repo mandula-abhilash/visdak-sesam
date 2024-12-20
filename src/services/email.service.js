@@ -40,8 +40,8 @@ export const emailService = {
     };
   },
 
-  sendVerificationEmail: async (email, token) => {
-    const template = customTemplates.verification(token);
+  sendVerificationEmail: async (email, token, name) => {
+    const template = customTemplates.verification(token, name);
     await sendEmail(email, template.subject, template.html);
   },
 

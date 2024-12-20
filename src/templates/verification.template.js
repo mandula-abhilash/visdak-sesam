@@ -1,11 +1,11 @@
 import { styles } from "./styles.js";
 
-export const verificationTemplate = (token) => ({
+export const verificationTemplate = (token, name) => ({
   subject: "Verify your email address",
   html: `
     <div style="${styles.container}">
       <div style="${styles.header}">
-        <h1 style="${styles.title}">Welcome! 👋</h1>
+        <h1 style="${styles.title}">Welcome ${name}! 👋</h1>
       </div>
       
       <div style="${styles.content}">

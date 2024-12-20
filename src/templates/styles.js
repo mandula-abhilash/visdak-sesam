@@ -28,7 +28,7 @@ export const styles = {
   button: `
       display: inline-block;
       padding: 12px 24px;
-      background-color: #4F46E5;
+      background-color: #3D9BE9;
       color: #ffffff;
       text-decoration: none;
       border-radius: 6px;
@@ -44,7 +44,7 @@ export const styles = {
       font-size: 14px;
     `,
   link: `
-      color: #4F46E5;
+      color: #3D9BE9;
       text-decoration: none;
     `,
   note: `
