@@ -48,15 +48,11 @@ const userSchema = new Schema(
       type: Boolean,
       default: false,
     },
-    verificationToken: {
-      type: String,
-    },
-    passwordResetToken: {
-      type: String,
-    },
-    passwordResetExpires: {
-      type: Date,
-    },
+    verificationToken: String,
+    verificationTokenExpires: Date,
+    lastVerificationEmailSent: Date,
+    passwordResetToken: String,
+    passwordResetExpires: Date,
   },
   {
     timestamps: true,

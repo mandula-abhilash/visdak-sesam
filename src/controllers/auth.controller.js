@@ -5,19 +5,71 @@ import { generateTokens, verifyToken } from "../utils/token.utils.js";
 import { setAuthCookies, clearAuthCookies } from "../utils/cookie.utils.js";
 import crypto from "crypto";
 
+const VERIFICATION_TOKEN_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
+const EMAIL_COOLDOWN = 15 * 60 * 1000; // 15 minutes
+
 // Register controller
 export const register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
     const existingUser = await UserModel.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({
-        status: "error",
-        error: { code: 400, details: "Email already registered" },
+
+    // If user exists but is not verified
+    if (existingUser && !existingUser.isVerified) {
+      // Check if we should send a new verification email
+      const canSendNewEmail =
+        !existingUser.lastVerificationEmailSent ||
+        Date.now() - existingUser.lastVerificationEmailSent.getTime() >
+          EMAIL_COOLDOWN;
+
+      if (!canSendNewEmail) {
+        const timeLeft = Math.ceil(
+          (EMAIL_COOLDOWN -
+            (Date.now() - existingUser.lastVerificationEmailSent.getTime())) /
+            60000
+        );
+        return res.status(400).json({
+          status: "error",
+          error: {
+            code: 400,
+            details: `Verification already initiated. Please check your email or try again in ${timeLeft} minutes.`,
+          },
+        });
+      }
+
+      const verificationToken = crypto.randomBytes(32).toString("hex");
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      await UserModel.findByIdAndUpdate(existingUser._id, {
+        name,
+        password: hashedPassword,
+        verificationToken,
+        verificationTokenExpires: new Date(
+          Date.now() + VERIFICATION_TOKEN_EXPIRY
+        ),
+        lastVerificationEmailSent: new Date(),
+      });
+
+      await emailService.sendVerificationEmail(email, verificationToken);
+
+      return res.status(200).json({
+        status: "success",
+        data: { email },
+        message:
+          "A new verification email has been sent. Please verify your email to continue.",
       });
     }
 
+    // If user exists and is verified
+    if (existingUser && existingUser.isVerified) {
+      return res.status(400).json({
+        status: "error",
+        error: { code: 400, details: "Email already registered and verified" },
+      });
+    }
+
+    // Create new user
     const verificationToken = crypto.randomBytes(32).toString("hex");
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -26,6 +78,10 @@ export const register = async (req, res) => {
       email,
       password: hashedPassword,
       verificationToken,
+      verificationTokenExpires: new Date(
+        Date.now() + VERIFICATION_TOKEN_EXPIRY
+      ),
+      lastVerificationEmailSent: new Date(),
       isVerified: false,
       role: "user",
     });
@@ -88,23 +144,32 @@ export const login = async (req, res) => {
 export const verifyEmail = async (req, res) => {
   try {
     const { token } = req.query;
-    const user = await UserModel.findOne({ verificationToken: token });
+    const user = await UserModel.findOne({
+      verificationToken: token,
+      verificationTokenExpires: { $gt: new Date() },
+    });
 
     if (!user) {
       return res.status(400).json({
         status: "error",
-        error: { code: 400, details: "Invalid or expired verification token" },
+        error: {
+          code: 400,
+          details:
+            "Invalid or expired verification token. Please request a new verification email.",
+        },
       });
     }
 
     await UserModel.findByIdAndUpdate(user._id, {
       isVerified: true,
       verificationToken: null,
+      verificationTokenExpires: null,
+      lastVerificationEmailSent: null,
     });
 
     res.json({
       status: "success",
-      message: "Email verified successfully",
+      message: "Email verified successfully. You can now log in.",
     });
   } catch (error) {
     res.status(400).json({
