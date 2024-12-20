@@ -40,11 +40,10 @@ export const register = async (req, res) => {
       }
 
       const verificationToken = crypto.randomBytes(32).toString("hex");
-      const hashedPassword = await bcrypt.hash(password, 10);
 
       await UserModel.findByIdAndUpdate(existingUser._id, {
         name,
-        password: hashedPassword,
+        password,
         verificationToken,
         verificationTokenExpires: new Date(
           Date.now() + VERIFICATION_TOKEN_EXPIRY
@@ -72,12 +71,11 @@ export const register = async (req, res) => {
 
     // Create new user
     const verificationToken = crypto.randomBytes(32).toString("hex");
-    const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await UserModel.create({
       name,
       email,
-      password: hashedPassword,
+      password,
       verificationToken,
       verificationTokenExpires: new Date(
         Date.now() + VERIFICATION_TOKEN_EXPIRY
@@ -108,7 +106,15 @@ export const login = async (req, res) => {
     const { email, password } = req.body;
 
     const user = await UserModel.findOne({ email }).select("+password");
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    if (!user) {
+      return res.status(401).json({
+        status: "error",
+        error: { code: 401, details: "Invalid email or password" },
+      });
+    }
+
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
       return res.status(401).json({
         status: "error",
         error: { code: 401, details: "Invalid email or password" },
@@ -229,9 +235,8 @@ export const resetPassword = async (req, res) => {
       });
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
     await UserModel.findByIdAndUpdate(user._id, {
-      password: hashedPassword,
+      password,
       passwordResetToken: null,
       passwordResetExpires: null,
     });
