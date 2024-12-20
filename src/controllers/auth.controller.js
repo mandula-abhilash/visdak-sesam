@@ -29,11 +29,12 @@ export const register = async (req, res) => {
             (Date.now() - existingUser.lastVerificationEmailSent.getTime())) /
             60000
         );
+        const minuteText = timeLeft === 1 ? "minute" : "minutes";
         return res.status(400).json({
           status: "error",
           error: {
             code: 400,
-            details: `Verification already initiated. Please check your email or try again in ${timeLeft} minutes.`,
+            details: `Verification already initiated. Please check your email or try again in ${timeLeft} ${minuteText}.`,
           },
         });
       }
