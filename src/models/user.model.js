@@ -9,6 +9,7 @@ import bcrypt from "bcryptjs";
  * @property {String} password - The hashed password of the user (required, not selected by default).
  * @property {String} role - The role of the user, either "user" or "admin" (default: "user").
  * @property {Boolean} isVerified - Indicates if the user's email is verified (default: false).
+ * @property {Boolean} hasReceivedWelcomeBonus - Indicates if the user has received their welcome bonus (default: false).
  * @property {String} verificationToken - Token for email verification.
  * @property {String} passwordResetToken - Token for resetting the password.
  * @property {Date} passwordResetExpires - Expiry time for the password reset token.
@@ -45,6 +46,10 @@ const userSchema = new Schema(
       default: "user",
     },
     isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    hasReceivedWelcomeBonus: {
       type: Boolean,
       default: false,
     },
