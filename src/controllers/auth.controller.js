@@ -326,3 +326,30 @@ export const session = async (req, res) => {
     });
   }
 };
+
+/**
+ * Updates the `hasReceivedWelcomeBonus` field to `true` for a user.
+ */
+export const updateBonusStatus = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const user = await UserModel.findByIdAndUpdate(
+      userId,
+      { hasReceivedWelcomeBonus: true },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      message: "Welcome bonus status updated successfully",
+      data: user,
+    });
+  } catch (error) {
+    console.error("Error updating welcome bonus status:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};

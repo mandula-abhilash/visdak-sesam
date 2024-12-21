@@ -16,6 +16,7 @@ import {
   refreshToken,
   logout,
   session,
+  updateBonusStatus,
 } from "../controllers/auth.controller.js";
 
 const router = Router();
@@ -36,7 +37,8 @@ router.post(
 );
 router.post("/refresh-token", refreshToken);
 router.post("/logout", logout);
-
 router.get("/session", protect, session);
+
+router.patch("/user/bonus", protect, updateBonusStatus);
 
 export const authRouter = router;
