@@ -9,7 +9,7 @@ export const getCookieConfig = () => {
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? "strict" : "lax",
-    domain: isProduction ? ".visdak.com" : undefined,
+    domain: isProduction ? process.env.COOKIE_DOMAIN : undefined,
     path: "/",
   };
 };

@@ -22,6 +22,7 @@ const validateEnvVariables = () => {
     "AWS_SECRET_ACCESS_KEY",
     "SES_EMAIL_FROM",
     "APP_URL",
+    "COOKIE_DOMAIN",
   ];
 
   requiredVariables.forEach((variable) => {
