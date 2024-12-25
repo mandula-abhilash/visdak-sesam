@@ -8,7 +8,7 @@ export const getCookieConfig = () => {
   return {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? "strict" : "lax",
+    sameSite: "lax",
     domain: isProduction ? process.env.COOKIE_DOMAIN : undefined,
     path: "/",
   };
