@@ -7,7 +7,8 @@ import bcrypt from "bcryptjs";
  * @property {String} name - The full name of the user (required).
  * @property {String} email - The email address of the user (required, unique).
  * @property {String} password - The hashed password of the user (required, not selected by default).
- * @property {String} role - The role of the user, either "user" or "admin" (default: "user").
+ * @property {String} role - The role of the user (default: "user").
+ * @property {String} additionalFields - Allows storing any extra fields as an object
  * @property {Boolean} isVerified - Indicates if the user's email is verified (default: false).
  * @property {Boolean} hasReceivedWelcomeBonus - Indicates if the user has received their welcome bonus (default: false).
  * @property {String} verificationToken - Token for email verification.
@@ -42,8 +43,11 @@ const userSchema = new Schema(
     },
     role: {
       type: String,
-      enum: ["user", "admin"],
       default: "user",
+    },
+    additionalFields: {
+      type: Schema.Types.Mixed,
+      default: {},
     },
     isVerified: {
       type: Boolean,

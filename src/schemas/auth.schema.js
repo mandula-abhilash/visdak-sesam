@@ -24,6 +24,8 @@ export const registerSchema = z.object({
     name: z.string().min(2, "Name must be at least 2 characters long."),
     email: emailValidation,
     password: passwordValidation,
+    role: z.string().optional(),
+    additionalFields: z.record(z.string(), z.any()).optional(),
   }),
 });
 

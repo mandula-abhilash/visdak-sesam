@@ -11,7 +11,13 @@ const EMAIL_COOLDOWN = 15 * 60 * 1000; // 15 minutes
 // Register controller
 export const register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const {
+      name,
+      email,
+      password,
+      role = "user",
+      additionalFields = {},
+    } = req.body;
 
     const existingUser = await UserModel.findOne({ email });
 
@@ -76,13 +82,14 @@ export const register = async (req, res) => {
       name,
       email,
       password,
+      role,
+      additionalFields,
       verificationToken,
       verificationTokenExpires: new Date(
         Date.now() + VERIFICATION_TOKEN_EXPIRY
       ),
       lastVerificationEmailSent: new Date(),
       isVerified: false,
-      role: "user",
     });
 
     await emailService.sendVerificationEmail(email, verificationToken, name);
