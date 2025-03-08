@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
  *
  * @property {String} name - The full name of the user (required).
  * @property {String} email - The email address of the user (required, unique).
+ * @property {String} businessName - The business name of the user.
  * @property {String} password - The hashed password of the user (required, not selected by default).
  * @property {String} role - The role of the user (default: "user").
  * @property {String} additionalFields - Allows storing any extra fields as an object
@@ -34,6 +35,10 @@ const userSchema = new Schema(
         /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
         "Please provide a valid email address",
       ],
+    },
+    businessName: {
+      type: String,
+      trim: true,
     },
     password: {
       type: String,
