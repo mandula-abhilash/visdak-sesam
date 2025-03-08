@@ -141,6 +141,9 @@ export const login = async (req, res) => {
     // Set HTTP-only cookies
     setAuthCookies(res, accessToken, refreshToken);
 
+    // Set token expiry in response header
+    res.set("X-Token-Expiry", process.env.ACCESS_TOKEN_EXPIRY);
+
     const { password: _, ...userWithoutPassword } = user.toObject();
     res.json({
       status: "success",
@@ -289,6 +292,9 @@ export const refreshToken = async (req, res) => {
     // Set new HTTP-only cookies
     setAuthCookies(res, accessToken, newRefreshToken);
 
+    // Set token expiry in response header
+    res.set("X-Token-Expiry", process.env.ACCESS_TOKEN_EXPIRY);
+
     res.json({
       status: "success",
       message: "Tokens refreshed successfully",
@@ -321,6 +327,9 @@ export const session = async (req, res) => {
         error: { code: 404, details: "User not found" },
       });
     }
+
+    // Set token expiry in response header
+    res.set("X-Token-Expiry", process.env.ACCESS_TOKEN_EXPIRY);
 
     res.json({
       status: "success",

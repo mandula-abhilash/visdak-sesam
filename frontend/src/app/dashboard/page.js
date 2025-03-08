@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axiosInstance from "@/lib/axiosInstance";
+import ms from "ms";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -19,10 +20,11 @@ export default function Dashboard() {
         const response = await axiosInstance.get("/auth/session");
         if (response.data.status === "success") {
           setUser(response.data.data.user);
-          // Set initial session expiry (15 minutes in milliseconds)
+          // Get expiry from response headers or use default (1 minute)
+          const expiry = response.headers["x-token-expiry"];
           setSessionInfo((prev) => ({
             ...prev,
-            expiresIn: 15 * 60 * 1000,
+            expiresIn: ms(expiry),
           }));
         }
       } catch (error) {
@@ -43,14 +45,15 @@ export default function Dashboard() {
       setSessionInfo((prev) => {
         const newExpiresIn = prev.expiresIn - 1000;
 
-        // If session is about to expire (1 minute left) and we have refresh attempts
-        if (newExpiresIn <= 60000 && prev.refreshAttemptsLeft > 0) {
+        // If session is about to expire (30 seconds left) and we have refresh attempts
+        if (newExpiresIn <= 30000 && prev.refreshAttemptsLeft > 0) {
           axiosInstance
             .post("/auth/refresh-token")
-            .then(() => {
-              // Reset timer to 15 minutes on successful refresh
+            .then((response) => {
+              const expiry = response.headers["x-token-expiry"] || "1m";
+              // Reset timer with new expiry time
               return {
-                expiresIn: 15 * 60 * 1000,
+                expiresIn: ms(expiry),
                 refreshAttemptsLeft: prev.refreshAttemptsLeft - 1,
               };
             })
@@ -118,7 +121,7 @@ export default function Dashboard() {
                 <span className="font-medium">Session expires in: </span>
                 <span
                   className={`${
-                    sessionInfo.expiresIn <= 60000
+                    sessionInfo.expiresIn <= 30000
                       ? "text-red-600"
                       : "text-green-600"
                   } font-mono`}
