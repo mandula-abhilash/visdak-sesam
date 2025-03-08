@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
+import cors from "cors";
 import { authRouter } from "./src/routes/auth.routes.js";
 import mongoose from "mongoose";
 
@@ -8,7 +9,16 @@ dotenv.config();
 
 const app = express();
 
+// CORS configuration
+const corsOptions = {
+  origin: process.env.CLIENT_URL || "http://localhost:3000",
+  credentials: true, // Important for cookies
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
 // Middleware
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
