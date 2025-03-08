@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import axiosInstance from "@/lib/axiosInstance";
 
 export default function RegisterForm() {
   const [formData, setFormData] = useState({
@@ -17,21 +18,17 @@ export default function RegisterForm() {
     setError("");
 
     try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
+      const response = await axiosInstance.post("/auth/register", formData);
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error?.details || "Failed to register");
+      if (response.data.status === "success") {
+        router.push("/auth/login");
       }
-
-      router.push("/auth/login");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setError(
+        err.response?.data?.error?.details ||
+          err.message ||
+          "Failed to register"
+      );
     }
   };
 
@@ -97,9 +94,7 @@ export default function RegisterForm() {
           required
         />
       </div>
-
       {error && <div className="text-red-600 text-sm">{error}</div>}
-
       <button
         type="submit"
         className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
