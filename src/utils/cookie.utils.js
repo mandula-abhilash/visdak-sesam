@@ -28,17 +28,26 @@ export const setAuthCookies = (
   refreshToken,
   remainingTime = null
 ) => {
+  // Get base cookie config
   const cookieConfig = getCookieConfig();
 
-  // Parse the access token to get its expiry
-  const accessExpiry = jwt.decode(accessToken).exp;
-  const accessExpiryMs = accessExpiry * 1000 - Date.now();
+  // For access token, use the expiry from environment variable directly
+  // This is safer than trying to extract it from the token
+  const accessExpiryMs = ms(process.env.ACCESS_TOKEN_EXPIRY);
 
-  // For the refresh token, use the provided remainingTime if available
-  const refreshExpiryMs =
-    remainingTime !== null
-      ? remainingTime * 1000 // Convert seconds to milliseconds
-      : ms(process.env.REFRESH_TOKEN_EXPIRY);
+  // For refresh token, use either the remaining time or the full expiry
+  let refreshExpiryMs;
+  if (remainingTime !== null && remainingTime > 0) {
+    // Use the provided remaining time for non-sliding tokens
+    refreshExpiryMs = remainingTime * 1000; // Convert seconds to milliseconds
+  } else {
+    // Use the full expiry for sliding tokens or if no remaining time is provided
+    refreshExpiryMs = ms(process.env.REFRESH_TOKEN_EXPIRY);
+  }
+
+  // Ensure we never have negative expiry times
+  if (accessExpiryMs <= 0) accessExpiryMs = 60 * 1000; // Default to 1 minute
+  if (refreshExpiryMs <= 0) refreshExpiryMs = 24 * 60 * 60 * 1000; // Default to 1 day
 
   // Set cookies with the correct expiry times
   res.cookie("accessToken", accessToken, {
