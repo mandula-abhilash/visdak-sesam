@@ -19,10 +19,6 @@ export default function Dashboard() {
       try {
         const response = await axiosInstance.get("/auth/session");
         if (response.data.status === "success") {
-          setUser(response.data.data.user);
-          console.log(JSON.stringify(response, null, 2));
-          console.log("X TOKEN EXPIRY" + response.headers?.["x-token-expiry"]);
-
           // Get expiry from response headers or use default (1 minute)
           const expiry = response.headers?.["x-token-expiry"] || "1m";
           setSessionInfo((prev) => ({
