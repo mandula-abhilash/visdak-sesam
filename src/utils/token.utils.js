@@ -27,11 +27,24 @@ export const generateTokens = (payload) => {
 };
 
 /**
+ * Calculates remaining refresh token lifetime
+ * @param {number} originalIat - Original issuance time
+ * @returns {number} Remaining time in seconds
+ */
+const calculateRemainingTime = (originalIat) => {
+  const maxRefreshLifetime = Math.floor(
+    ms(process.env.REFRESH_TOKEN_EXPIRY) / 1000
+  );
+  const tokenAge = Math.floor(Date.now() / 1000) - originalIat;
+  return maxRefreshLifetime - tokenAge;
+};
+
+/**
  * Generates a new refresh token based on the refresh mode
  * @param {Object} payload - Token payload
  * @param {number} originalIat - Original issuance time
  * @param {boolean} slidingRefresh - Whether to use sliding refresh
- * @returns {Object} New tokens
+ * @returns {Object} New tokens and remaining time
  */
 export const regenerateTokens = (
   payload,
@@ -45,6 +58,7 @@ export const regenerateTokens = (
   );
 
   let refreshToken;
+  let remainingTime = null;
   const maxRefreshLifetime = Math.floor(
     ms(process.env.REFRESH_TOKEN_EXPIRY) / 1000
   );
@@ -61,8 +75,7 @@ export const regenerateTokens = (
     );
   } else {
     // Non-sliding refresh: maintain original window
-    const tokenAge = Math.floor(Date.now() / 1000) - originalIat;
-    const remainingTime = maxRefreshLifetime - tokenAge;
+    remainingTime = calculateRemainingTime(originalIat);
 
     if (remainingTime <= 0) {
       throw new Error("Refresh token maximum lifetime exceeded");
@@ -78,7 +91,7 @@ export const regenerateTokens = (
     );
   }
 
-  return { accessToken, refreshToken };
+  return { accessToken, refreshToken, remainingTime };
 };
 
 /**

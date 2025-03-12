@@ -289,20 +289,14 @@ export const refreshToken = async (req, res) => {
       });
     }
 
-    // Use sliding refresh based on environment variable (false if it equals 'false')
+    // Use sliding refresh based on environment variable
     const slidingRefresh = process.env.USE_SLIDING_REFRESH !== "false";
 
-    // Calculate remaining time for non-sliding refresh
-    let remainingTime = null;
-    if (!slidingRefresh) {
-      const tokenAge = Math.floor(Date.now() / 1000) - decoded.originalIat;
-      const maxRefreshLifetime = Math.floor(
-        ms(process.env.REFRESH_TOKEN_EXPIRY) / 1000
-      );
-      remainingTime = maxRefreshLifetime - tokenAge;
-    }
-
-    const { accessToken, refreshToken: newRefreshToken } = regenerateTokens(
+    const {
+      accessToken,
+      refreshToken: newRefreshToken,
+      remainingTime,
+    } = regenerateTokens(
       { userId: user._id, role: user.role },
       decoded.originalIat,
       slidingRefresh
