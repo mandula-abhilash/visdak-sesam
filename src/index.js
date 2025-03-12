@@ -17,11 +17,15 @@ const validateEnvVariables = () => {
     "REFRESH_TOKEN_SECRET",
     "ACCESS_TOKEN_EXPIRY",
     "REFRESH_TOKEN_EXPIRY",
-    "AWS_REGION",
+    "USE_SLIDING_REFRESH",
     "AWS_ACCESS_KEY_ID",
     "AWS_SECRET_ACCESS_KEY",
     "SES_EMAIL_FROM",
+    "AWS_REGION",
     "APP_URL",
+    "CLIENT_URL",
+    "PORT",
+    "NODE_ENV",
     "COOKIE_DOMAIN",
   ];
 
