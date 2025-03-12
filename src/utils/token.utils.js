@@ -1,24 +1,5 @@
 import jwt from "jsonwebtoken";
-
-// Helper function to parse time strings like "7d", "1h", "30m" into seconds
-const parseTimeString = (timeString) => {
-  const units = {
-    s: 1,
-    m: 60,
-    h: 60 * 60,
-    d: 24 * 60 * 60,
-    w: 7 * 24 * 60 * 60,
-  };
-
-  const match = timeString.match(/^(\d+)([smhdw])$/);
-  if (!match) {
-    // Default fallback
-    return 7 * 24 * 60 * 60; // 7 days in seconds
-  }
-
-  const [, value, unit] = match;
-  return parseInt(value) * units[unit];
-};
+import ms from "ms";
 
 /**
  * Generates JWT tokens (access and refresh)
@@ -35,9 +16,11 @@ export const generateTokens = (payload) => {
     {
       ...payload,
       originalIat: Math.floor(Date.now() / 1000),
+      exp:
+        Math.floor(Date.now() / 1000) +
+        Math.floor(ms(process.env.REFRESH_TOKEN_EXPIRY) / 1000),
     },
-    process.env.REFRESH_TOKEN_SECRET,
-    { expiresIn: process.env.REFRESH_TOKEN_EXPIRY }
+    process.env.REFRESH_TOKEN_SECRET
   );
 
   return { accessToken, refreshToken };
@@ -62,18 +45,22 @@ export const regenerateTokens = (
   );
 
   let refreshToken;
+  const maxRefreshLifetime = Math.floor(
+    ms(process.env.REFRESH_TOKEN_EXPIRY) / 1000
+  );
+
   if (slidingRefresh) {
     // Sliding refresh: create new refresh token with full expiry window
     refreshToken = jwt.sign(
-      { ...payload, originalIat: Math.floor(Date.now() / 1000) },
-      process.env.REFRESH_TOKEN_SECRET,
-      { expiresIn: process.env.REFRESH_TOKEN_EXPIRY }
+      {
+        ...payload,
+        originalIat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + maxRefreshLifetime,
+      },
+      process.env.REFRESH_TOKEN_SECRET
     );
   } else {
     // Non-sliding refresh: maintain original window
-    const maxRefreshLifetime = parseTimeString(
-      process.env.REFRESH_TOKEN_EXPIRY
-    );
     const tokenAge = Math.floor(Date.now() / 1000) - originalIat;
     const remainingTime = maxRefreshLifetime - tokenAge;
 
@@ -82,9 +69,12 @@ export const regenerateTokens = (
     }
 
     refreshToken = jwt.sign(
-      { ...payload, originalIat },
-      process.env.REFRESH_TOKEN_SECRET,
-      { expiresIn: `${remainingTime}s` }
+      {
+        ...payload,
+        originalIat,
+        exp: originalIat + maxRefreshLifetime,
+      },
+      process.env.REFRESH_TOKEN_SECRET
     );
   }
 
