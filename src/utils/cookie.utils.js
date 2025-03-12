@@ -1,4 +1,5 @@
 import ms from "ms";
+import jwt from "jsonwebtoken";
 
 /**
  * Cookie configuration for different environments
@@ -19,18 +20,35 @@ export const getCookieConfig = () => {
  * @param {Object} res - Express response object
  * @param {string} accessToken - JWT access token
  * @param {string} refreshToken - JWT refresh token
+ * @param {number|null} remainingTime - Remaining time in seconds for non-sliding refresh tokens
  */
-export const setAuthCookies = (res, accessToken, refreshToken) => {
+export const setAuthCookies = (
+  res,
+  accessToken,
+  refreshToken,
+  remainingTime = null
+) => {
   const cookieConfig = getCookieConfig();
 
+  // Parse the access token to get its expiry
+  const accessExpiry = jwt.decode(accessToken).exp;
+  const accessExpiryMs = accessExpiry * 1000 - Date.now();
+
+  // For the refresh token, use the provided remainingTime if available
+  const refreshExpiryMs =
+    remainingTime !== null
+      ? remainingTime * 1000 // Convert seconds to milliseconds
+      : ms(process.env.REFRESH_TOKEN_EXPIRY);
+
+  // Set cookies with the correct expiry times
   res.cookie("accessToken", accessToken, {
     ...cookieConfig,
-    maxAge: ms(process.env.ACCESS_TOKEN_EXPIRY),
+    maxAge: accessExpiryMs,
   });
 
   res.cookie("refreshToken", refreshToken, {
     ...cookieConfig,
-    maxAge: ms(process.env.REFRESH_TOKEN_EXPIRY),
+    maxAge: refreshExpiryMs,
   });
 };
 

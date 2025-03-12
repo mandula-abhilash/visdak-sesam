@@ -289,7 +289,18 @@ export const refreshToken = async (req, res) => {
       });
     }
 
+    // Use sliding refresh based on environment variable (false if it equals 'false')
     const slidingRefresh = process.env.USE_SLIDING_REFRESH !== "false";
+
+    // Calculate remaining time for non-sliding refresh
+    let remainingTime = null;
+    if (!slidingRefresh) {
+      const tokenAge = Math.floor(Date.now() / 1000) - decoded.originalIat;
+      const maxRefreshLifetime = Math.floor(
+        ms(process.env.REFRESH_TOKEN_EXPIRY) / 1000
+      );
+      remainingTime = maxRefreshLifetime - tokenAge;
+    }
 
     const { accessToken, refreshToken: newRefreshToken } = regenerateTokens(
       { userId: user._id, role: user.role },
@@ -297,8 +308,8 @@ export const refreshToken = async (req, res) => {
       slidingRefresh
     );
 
-    // Set new HTTP-only cookies
-    setAuthCookies(res, accessToken, newRefreshToken);
+    // Set new HTTP-only cookies with correct remaining time
+    setAuthCookies(res, accessToken, newRefreshToken, remainingTime);
 
     // Set token expiry in response header
     res.set("X-Token-Expiry", process.env.ACCESS_TOKEN_EXPIRY);
