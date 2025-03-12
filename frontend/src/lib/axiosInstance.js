@@ -4,7 +4,7 @@ import createAuthRefreshInterceptor from "axios-auth-refresh";
 // Create axios instance
 const axiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000",
-  withCredentials: true, // Important for sending cookies
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
@@ -13,10 +13,15 @@ const axiosInstance = axios.create({
 // Function that will be called to refresh authorization
 const refreshAuthLogic = async (failedRequest) => {
   try {
-    await axiosInstance.post("/auth/refresh-token");
+    const response = await axiosInstance.post("/auth/refresh-token");
+    // Get new expiry time from response headers
+    const newExpiry = response.headers["x-token-expiry"];
+    if (newExpiry) {
+      // You can store or handle the new expiry time here if needed
+      console.log("New token expiry:", newExpiry);
+    }
     return Promise.resolve();
   } catch (error) {
-    // If refresh token fails, redirect to login
     window.location.href = "/auth/login";
     return Promise.reject(error);
   }
@@ -24,14 +29,20 @@ const refreshAuthLogic = async (failedRequest) => {
 
 // Attach the refresh token logic to the axios instance
 createAuthRefreshInterceptor(axiosInstance, refreshAuthLogic, {
-  statusCodes: [401], // Array of HTTP Status codes which trigger the refresh
+  statusCodes: [401],
 });
 
-// Add a response interceptor for handling errors
+// Add a response interceptor for handling errors and headers
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Log token expiry from headers for debugging
+    const tokenExpiry = response.headers["x-token-expiry"];
+    if (tokenExpiry) {
+      console.log("Token expiry from response:", tokenExpiry);
+    }
+    return response;
+  },
   (error) => {
-    // Handle errors that aren't related to authentication
     if (error.response?.status === 404) {
       console.error("Resource not found");
     } else if (error.response?.status === 500) {

@@ -12,9 +12,10 @@ const app = express();
 // CORS configuration
 const corsOptions = {
   origin: process.env.CLIENT_URL || "http://localhost:3000",
-  credentials: true, // Important for cookies
+  credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
+  exposedHeaders: ["X-Token-Expiry"], // Expose the custom header
 };
 
 // Middleware

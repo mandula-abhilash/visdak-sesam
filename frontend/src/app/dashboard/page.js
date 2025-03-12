@@ -9,7 +9,7 @@ export default function Dashboard() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [sessionInfo, setSessionInfo] = useState({
-    expiresIn: 0,
+    expiresIn: ms("1m"), // Default to 1 minute
     refreshAttemptsLeft: 3,
   });
   const [loading, setLoading] = useState(true);
@@ -20,11 +20,14 @@ export default function Dashboard() {
         const response = await axiosInstance.get("/auth/session");
         if (response.data.status === "success") {
           setUser(response.data.data.user);
+          console.log(JSON.stringify(response, null, 2));
+          console.log("X TOKEN EXPIRY" + response.headers?.["x-token-expiry"]);
+
           // Get expiry from response headers or use default (1 minute)
-          const expiry = response.headers["x-token-expiry"];
+          const expiry = response.headers?.["x-token-expiry"] || "1m";
           setSessionInfo((prev) => ({
             ...prev,
-            expiresIn: ms(expiry),
+            expiresIn: ms(expiry) || ms("1m"), // Fallback to 1m if parsing fails
           }));
         }
       } catch (error) {
@@ -39,10 +42,10 @@ export default function Dashboard() {
   }, [router]);
 
   useEffect(() => {
-    if (!sessionInfo.expiresIn) return;
-
     const timer = setInterval(() => {
       setSessionInfo((prev) => {
+        if (!prev.expiresIn) return prev;
+
         const newExpiresIn = prev.expiresIn - 1000;
 
         // If session is about to expire (30 seconds left) and we have refresh attempts
@@ -50,15 +53,13 @@ export default function Dashboard() {
           axiosInstance
             .post("/auth/refresh-token")
             .then((response) => {
-              const expiry = response.headers["x-token-expiry"] || "1m";
-              // Reset timer with new expiry time
-              return {
-                expiresIn: ms(expiry),
+              const expiry = response.headers?.["x-token-expiry"] || "1m";
+              setSessionInfo({
+                expiresIn: ms(expiry) || ms("1m"), // Fallback to 1m if parsing fails
                 refreshAttemptsLeft: prev.refreshAttemptsLeft - 1,
-              };
+              });
             })
             .catch(() => {
-              // If refresh fails, let the session expire
               router.push("/auth/login");
             });
         }
@@ -75,7 +76,7 @@ export default function Dashboard() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [sessionInfo.expiresIn, router]);
+  }, [router]);
 
   const handleLogout = async () => {
     try {
@@ -87,6 +88,7 @@ export default function Dashboard() {
   };
 
   const formatTime = (ms) => {
+    if (!ms || ms < 0) return "0:00";
     const minutes = Math.floor(ms / 60000);
     const seconds = Math.floor((ms % 60000) / 1000);
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
@@ -105,7 +107,9 @@ export default function Dashboard() {
       <div className="max-w-4xl mx-auto p-6">
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">Welcome, {user?.name}!</h1>
+            <h1 className="text-2xl font-bold">
+              Welcome, {user?.name || "User"}!
+            </h1>
             <button
               onClick={handleLogout}
               className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
@@ -143,7 +147,7 @@ export default function Dashboard() {
               </p>
               <p>
                 <span className="font-medium">Role: </span>
-                <span className="capitalize">{user?.role}</span>
+                <span className="capitalize">{user?.role || "user"}</span>
               </p>
             </div>
           </div>
