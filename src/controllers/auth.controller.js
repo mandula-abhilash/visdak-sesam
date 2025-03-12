@@ -289,8 +289,7 @@ export const refreshToken = async (req, res) => {
       });
     }
 
-    // Use sliding refresh based on environment variable (defaults to true if not set)
-    const slidingRefresh = process.env.USE_SLIDING_REFRESH;
+    const slidingRefresh = process.env.USE_SLIDING_REFRESH !== "false";
 
     const { accessToken, refreshToken: newRefreshToken } = regenerateTokens(
       { userId: user._id, role: user.role },

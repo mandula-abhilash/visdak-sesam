@@ -36,7 +36,7 @@ export const generateTokens = (payload) => {
 export const regenerateTokens = (
   payload,
   originalIat,
-  slidingRefresh = true
+  slidingRefresh = false
 ) => {
   const accessToken = jwt.sign(
     { userId: payload.userId, role: payload.role },
