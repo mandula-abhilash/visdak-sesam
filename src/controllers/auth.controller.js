@@ -1,7 +1,11 @@
 import bcrypt from "bcryptjs";
 import { UserModel } from "../models/user.model.js";
 import { emailService } from "../services/email.service.js";
-import { generateTokens, verifyToken } from "../utils/token.utils.js";
+import {
+  generateTokens,
+  verifyToken,
+  regenerateTokens,
+} from "../utils/token.utils.js";
 import { setAuthCookies, clearAuthCookies } from "../utils/cookie.utils.js";
 import crypto from "crypto";
 
@@ -285,9 +289,14 @@ export const refreshToken = async (req, res) => {
       });
     }
 
-    const tokenPayload = { userId: user._id, role: user.role };
-    const { accessToken, refreshToken: newRefreshToken } =
-      generateTokens(tokenPayload);
+    // Use sliding refresh based on environment variable (defaults to true if not set)
+    const slidingRefresh = process.env.USE_SLIDING_REFRESH !== "false";
+
+    const { accessToken, refreshToken: newRefreshToken } = regenerateTokens(
+      { userId: user._id, role: user.role },
+      decoded.originalIat,
+      slidingRefresh
+    );
 
     // Set new HTTP-only cookies
     setAuthCookies(res, accessToken, newRefreshToken);
