@@ -8,33 +8,39 @@
     "build": "echo 'Build step skipped as this is now a JavaScript project'",
     "test": "jest",
     "lint": "eslint .",
-    "server": "nodemon test-server.js"
+    "server": "nodemon test-server.js",
+    "migrate:latest": "knex migrate:latest",
+    "migrate:rollback": "knex migrate:rollback",
+    "migrate:make": "knex migrate:make"
   },
   "keywords": [
     "authentication",
     "jwt",
     "javascript",
-    "modular"
+    "modular",
+    "postgresql",
+    "knex"
   ],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@aws-sdk/client-ses": "^3.696.0",
-    "bcryptjs": "^2.4.3",
-    "cookie-parser": "^1.4.6",
+    "@aws-sdk/client-ses": "^3.835.0",
+    "bcryptjs": "^3.0.2",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
+    "dotenv": "^16.5.0",
     "jsonwebtoken": "^9.0.2",
+    "knex": "^3.1.0",
     "morgan": "^1.10.0",
     "ms": "^2.1.3",
-    "zod": "^3.23.8"
+    "pg": "^8.16.2",
+    "zod": "^3.25.67"
   },
   "devDependencies": {
-    "eslint": "^8.57.0",
-    "nodemon": "^3.1.9"
+    "eslint": "^9.29.0",
+    "nodemon": "^3.1.10"
   },
   "peerDependencies": {
-    "express": "^4.21.2",
-    "mongoose": "^8.8.2"
+    "express": "^4.21.2"
   }
 }

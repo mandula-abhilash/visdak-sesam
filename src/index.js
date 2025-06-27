@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import mongoose from "mongoose";
+import db from "../db/knex.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { protect, admin } from "./middleware/auth.middleware.js";
 import { emailService } from "./services/email.service.js";
@@ -12,7 +12,11 @@ import { emailService } from "./services/email.service.js";
  */
 const validateEnvVariables = () => {
   const requiredVariables = [
-    "MONGODB_URI",
+    "PG_HOST",
+    "PG_PORT",
+    "PG_USER",
+    "PG_PASSWORD",
+    "PG_DATABASE",
     "JWT_SECRET",
     "REFRESH_TOKEN_SECRET",
     "ACCESS_TOKEN_EXPIRY",
@@ -42,21 +46,29 @@ const validateEnvVariables = () => {
 validateEnvVariables();
 
 /**
- * Connect to MongoDB
- * @throws {Error} If MongoDB connection fails
+ * Connect to PostgreSQL and run migrations
+ * @throws {Error} If PostgreSQL connection fails
  */
-const connectToMongoDB = async () => {
+const connectToPostgreSQL = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log("SESAM : Connected to MongoDB successfully!");
+    // Test the connection
+    await db.raw("SELECT 1");
+    console.log("SESAM : Connected to PostgreSQL successfully!");
+
+    // Run pending migrations
+    await db.migrate.latest();
+    console.log("SESAM : Database migrations completed successfully!");
   } catch (error) {
-    console.error("SESAM : MongoDB connection error:", error.message);
+    console.error(
+      "SESAM : PostgreSQL connection or migration error:",
+      error.message
+    );
     process.exit(1);
   }
 };
 
-// Establish MongoDB connection on module load
-connectToMongoDB();
+// Establish PostgreSQL connection and run migrations on module load
+connectToPostgreSQL();
 
 /**
  * Exports all the routes, middleware and configuration methods
@@ -71,10 +83,10 @@ const visdakSesamModule = () => ({
 });
 
 console.log(
-  "SESAM : Environment variables and MongoDB connection initialized successfully!"
+  "SESAM : Environment variables and PostgreSQL connection initialized successfully!"
 );
 
 export default visdakSesamModule;
 
-// Export user model for external usage
-export * from "./models/user.model.js";
+// Export user repository for external usage
+export { UserRepository } from "./db/user.repository.js";

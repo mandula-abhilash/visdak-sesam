@@ -1,5 +1,4 @@
-import bcrypt from "bcryptjs";
-import { UserModel } from "../models/user.model.js";
+import { UserRepository } from "../db/user.repository.js";
 import { emailService } from "../services/email.service.js";
 import {
   generateTokens,
@@ -20,23 +19,26 @@ export const register = async (req, res) => {
       email,
       password,
       role = "user",
+      businessName,
       additionalFields = {},
     } = req.body;
 
-    const existingUser = await UserModel.findOne({ email });
+    const existingUser = await UserRepository.findByEmail(email);
 
     // If user exists but is not verified
     if (existingUser && !existingUser.isVerified) {
       // Check if we should send a new verification email
       const canSendNewEmail =
         !existingUser.lastVerificationEmailSent ||
-        Date.now() - existingUser.lastVerificationEmailSent.getTime() >
+        Date.now() -
+          new Date(existingUser.lastVerificationEmailSent).getTime() >
           EMAIL_COOLDOWN;
 
       if (!canSendNewEmail) {
         const timeLeft = Math.ceil(
           (EMAIL_COOLDOWN -
-            (Date.now() - existingUser.lastVerificationEmailSent.getTime())) /
+            (Date.now() -
+              new Date(existingUser.lastVerificationEmailSent).getTime())) /
             60000
         );
         const minuteText = timeLeft === 1 ? "minute" : "minutes";
@@ -51,9 +53,11 @@ export const register = async (req, res) => {
 
       const verificationToken = crypto.randomBytes(32).toString("hex");
 
-      await UserModel.findByIdAndUpdate(existingUser._id, {
+      await UserRepository.updateById(existingUser.id, {
         name,
         password,
+        businessName,
+        additionalFields,
         verificationToken,
         verificationTokenExpires: new Date(
           Date.now() + VERIFICATION_TOKEN_EXPIRY
@@ -82,11 +86,12 @@ export const register = async (req, res) => {
     // Create new user
     const verificationToken = crypto.randomBytes(32).toString("hex");
 
-    const user = await UserModel.create({
+    const user = await UserRepository.create({
       name,
       email,
       password,
       role,
+      businessName,
       additionalFields,
       verificationToken,
       verificationTokenExpires: new Date(
@@ -116,7 +121,7 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await UserModel.findOne({ email }).select("+password");
+    const user = await UserRepository.findByEmailWithPassword(email);
     if (!user) {
       return res.status(401).json({
         status: "error",
@@ -124,7 +129,10 @@ export const login = async (req, res) => {
       });
     }
 
-    const isPasswordValid = await user.comparePassword(password);
+    const isPasswordValid = await UserRepository.comparePassword(
+      password,
+      user.password_hash
+    );
     if (!isPasswordValid) {
       return res.status(401).json({
         status: "error",
@@ -132,14 +140,14 @@ export const login = async (req, res) => {
       });
     }
 
-    if (!user.isVerified) {
+    if (!user.is_verified) {
       return res.status(401).json({
         status: "error",
         error: { code: 401, details: "Please verify your email first" },
       });
     }
 
-    const tokenPayload = { userId: user._id, role: user.role };
+    const tokenPayload = { userId: user.id, role: user.role };
     const { accessToken, refreshToken } = generateTokens(tokenPayload);
 
     // Set HTTP-only cookies
@@ -148,7 +156,8 @@ export const login = async (req, res) => {
     // Set token expiry in response header
     res.set("X-Token-Expiry", process.env.ACCESS_TOKEN_EXPIRY);
 
-    const { password: _, ...userWithoutPassword } = user.toObject();
+    const transformedUser = UserRepository.transformUser(user);
+    const { password_hash, ...userWithoutPassword } = transformedUser;
     res.json({
       status: "success",
       data: { user: userWithoutPassword },
@@ -165,10 +174,7 @@ export const login = async (req, res) => {
 export const verifyEmail = async (req, res) => {
   try {
     const { token } = req.query;
-    const user = await UserModel.findOne({
-      verificationToken: token,
-      verificationTokenExpires: { $gt: new Date() },
-    });
+    const user = await UserRepository.findByVerificationToken(token);
 
     if (!user) {
       return res.status(400).json({
@@ -181,7 +187,7 @@ export const verifyEmail = async (req, res) => {
       });
     }
 
-    await UserModel.findByIdAndUpdate(user._id, {
+    await UserRepository.updateById(user.id, {
       isVerified: true,
       verificationToken: null,
       verificationTokenExpires: null,
@@ -204,7 +210,7 @@ export const verifyEmail = async (req, res) => {
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
-    const user = await UserModel.findOne({ email });
+    const user = await UserRepository.findByEmail(email);
 
     if (!user) {
       return res.status(404).json({
@@ -214,7 +220,7 @@ export const forgotPassword = async (req, res) => {
     }
 
     const resetToken = crypto.randomBytes(32).toString("hex");
-    await UserModel.findByIdAndUpdate(user._id, {
+    await UserRepository.updateById(user.id, {
       passwordResetToken: resetToken,
       passwordResetExpires: new Date(Date.now() + 3600000), // 1 hour
     });
@@ -237,10 +243,7 @@ export const forgotPassword = async (req, res) => {
 export const resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
-    const user = await UserModel.findOne({
-      passwordResetToken: token,
-      passwordResetExpires: { $gt: new Date() },
-    });
+    const user = await UserRepository.findByPasswordResetToken(token);
 
     if (!user) {
       return res.status(400).json({
@@ -249,8 +252,8 @@ export const resetPassword = async (req, res) => {
       });
     }
 
-    await UserModel.findByIdAndUpdate(user._id, {
-      password,
+    await UserRepository.updateById(user.id, {
+      password: newPassword,
       passwordResetToken: null,
       passwordResetExpires: null,
     });
@@ -280,7 +283,7 @@ export const refreshToken = async (req, res) => {
     }
 
     const decoded = verifyToken(token, process.env.REFRESH_TOKEN_SECRET);
-    const user = await UserModel.findById(decoded.userId);
+    const user = await UserRepository.findById(decoded.userId);
 
     if (!user) {
       return res.status(401).json({
@@ -297,7 +300,7 @@ export const refreshToken = async (req, res) => {
       refreshToken: newRefreshToken,
       remainingTime,
     } = regenerateTokens(
-      { userId: user._id, role: user.role },
+      { userId: user.id, role: user.role },
       decoded.originalIat,
       slidingRefresh
     );
@@ -332,7 +335,7 @@ export const logout = async (req, res) => {
 
 export const session = async (req, res) => {
   try {
-    const user = await UserModel.findById(req.user.userId).select("-password");
+    const user = await UserRepository.findById(req.user.userId);
 
     if (!user) {
       return res.status(404).json({
@@ -344,9 +347,12 @@ export const session = async (req, res) => {
     // Set token expiry in response header
     res.set("X-Token-Expiry", process.env.ACCESS_TOKEN_EXPIRY);
 
+    const transformedUser = UserRepository.transformUser(user);
+    const { password_hash, ...userWithoutPassword } = transformedUser;
+
     res.json({
       status: "success",
-      data: { user },
+      data: { user: userWithoutPassword },
     });
   } catch (error) {
     res.status(500).json({
@@ -363,11 +369,9 @@ export const updateBonusStatus = async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    const user = await UserModel.findByIdAndUpdate(
-      userId,
-      { hasReceivedWelcomeBonus: true },
-      { new: true }
-    );
+    const user = await UserRepository.updateById(userId, {
+      hasReceivedWelcomeBonus: true,
+    });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });

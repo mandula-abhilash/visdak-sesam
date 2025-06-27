@@ -1,13 +1,14 @@
-# Visdak SESAM
+# VISDAK SESAM
 
-A pluggable authentication module with support for multiple databases and email providers.
+A pluggable authentication module with support for PostgreSQL database and email providers.
 
 ---
 
 ## Features
 
-- Modular architecture with adapter pattern
-- Swappable database backends
+- Modular architecture with repository pattern
+- PostgreSQL database with Knex.js migrations
+- Flexible user schema with JSONB additional fields
 - Configurable email providers (e.g., AWS SES)
 - JWT-based authentication
 - Middleware for route protection and role-based access
@@ -24,6 +25,42 @@ npm install visdak-sesam
 
 ---
 
+## Database Setup
+
+This module uses PostgreSQL with Knex.js for database operations and migrations.
+
+### Prerequisites
+
+1. PostgreSQL server running locally or remotely
+2. Database created for the application
+
+### Environment Configuration
+
+Copy `.env.example` to `.env` and configure your PostgreSQL connection:
+
+```env
+PG_HOST=localhost
+PG_PORT=5432
+PG_USER=your_username
+PG_PASSWORD=your_password
+PG_DATABASE=your_database
+```
+
+### Running Migrations
+
+```bash
+# Run latest migrations
+npm run migrate:latest
+
+# Rollback last migration
+npm run migrate:rollback
+
+# Create new migration
+npm run migrate:make migration_name
+```
+
+---
+
 ## Configuration
 
 The module requires a configuration object for initialization:
@@ -32,7 +69,11 @@ The module requires a configuration object for initialization:
 
 ```javascript
 const config = {
-  MONGODB_URI: "mongodb://localhost:27017/your-db",
+  PG_HOST: "localhost",
+  PG_PORT: 5432,
+  PG_USER: "your_username",
+  PG_PASSWORD: "your_password",
+  PG_DATABASE: "your_database",
   JWT_SECRET: "your-jwt-secret",
   REFRESH_TOKEN_SECRET: "your-refresh-token-secret",
   accessTokenExpiry: "15m",
@@ -58,15 +99,15 @@ const config = {
 
 ```javascript
 import express from "express";
-import { createAuthModule } from "visdak-sesam";
+import visdakSesamModule from "visdak-sesam";
 
 const app = express();
 app.use(express.json());
 
-const authModule = createAuthModule(config);
+const authModule = visdakSesamModule();
 
 // Mount authentication routes
-app.use("/auth", authModule.router);
+app.use("/auth", authModule.authRoutes);
 
 // Example protected route
 app.get("/protected", authModule.middleware.protect, (req, res) => {
@@ -91,6 +132,47 @@ app.listen(3000, () => {
 
 ---
 
+## Flexible User Schema
+
+The user schema supports additional fields through a JSONB column, allowing you to store custom data for different business needs:
+
+### Registration with Additional Fields
+
+```javascript
+// Example registration with custom fields
+const registrationData = {
+  name: "John Doe",
+  email: "john@example.com",
+  password: "password123",
+  businessName: "Acme Corp",
+  additionalFields: {
+    company: "Acme Corporation",
+    phone: "+1234567890",
+    department: "Engineering",
+    preferences: {
+      newsletter: true,
+      notifications: false,
+    },
+    metadata: {
+      source: "website",
+      campaign: "spring2024",
+    },
+  },
+};
+```
+
+### Database Schema
+
+The `vd_sesam_users` table includes:
+
+- **Core fields**: `id`, `name`, `email`, `password_hash`, `role`
+- **Optional fields**: `business_name`
+- **Flexible fields**: `additional_fields` (JSONB) - stores any custom data
+- **Authentication fields**: `is_verified`, `verification_token`, etc.
+- **Timestamps**: `created_at`, `updated_at`
+
+---
+
 ## Endpoints and Usage
 
 ### 1. Register a User
@@ -101,7 +183,13 @@ app.listen(3000, () => {
   {
     "name": "John Doe",
     "email": "john@example.com",
-    "password": "password123"
+    "password": "password123",
+    "businessName": "Acme Corp",
+    "additionalFields": {
+      "company": "Acme Corporation",
+      "phone": "+1234567890",
+      "department": "Engineering"
+    }
   }
   ```
 - **Response**:
@@ -130,9 +218,17 @@ app.listen(3000, () => {
   {
     "status": "success",
     "data": {
-      "accessToken": "jwt-access-token",
-      "refreshToken": "jwt-refresh-token",
-      "user": { "id": "user-id", "name": "John Doe", "email": "john@example.com", "role": "user" }
+      "user": {
+        "id": "user-id",
+        "name": "John Doe",
+        "email": "john@example.com",
+        "role": "user",
+        "businessName": "Acme Corp",
+        "additionalFields": {
+          "company": "Acme Corporation",
+          "phone": "+1234567890"
+        }
+      }
     }
   }
   ```
@@ -194,19 +290,80 @@ app.listen(3000, () => {
 ### 6. Refresh Token
 
 - **Endpoint**: `POST /auth/refresh-token`
-- **Request Body**:
-  ```json
-  {
-    "refreshToken": "jwt-refresh-token"
-  }
-  ```
 - **Response**:
   ```json
   {
     "status": "success",
-    "data": { "accessToken": "new-jwt-access-token" }
+    "message": "Tokens refreshed successfully"
   }
   ```
+
+---
+
+## Database Operations
+
+### Using the User Repository
+
+```javascript
+import { UserRepository } from "visdak-sesam";
+
+// Find user by email
+const user = await UserRepository.findByEmail("john@example.com");
+
+// Create user with additional fields
+const newUser = await UserRepository.create({
+  name: "Jane Doe",
+  email: "jane@example.com",
+  password: "password123",
+  additionalFields: {
+    company: "Tech Corp",
+    role: "Developer",
+    skills: ["JavaScript", "Node.js", "PostgreSQL"],
+  },
+});
+
+// Update user
+const updatedUser = await UserRepository.updateById(userId, {
+  additionalFields: {
+    ...existingFields,
+    lastLogin: new Date(),
+    preferences: { theme: "dark" },
+  },
+});
+```
+
+---
+
+## Migration Management
+
+### Creating Migrations
+
+```bash
+# Create a new migration
+npm run migrate:make add_user_preferences
+
+# Run migrations
+npm run migrate:latest
+
+# Rollback last migration
+npm run migrate:rollback
+```
+
+### Example Migration
+
+```javascript
+export const up = async (knex) => {
+  return knex.schema.alterTable("vd_sesam_users", (table) => {
+    table.jsonb("preferences").defaultTo("{}");
+  });
+};
+
+export const down = async (knex) => {
+  return knex.schema.alterTable("vd_sesam_users", (table) => {
+    table.dropColumn("preferences");
+  });
+};
+```
 
 ---
 
@@ -237,17 +394,16 @@ app.get(
 
 ## Validation
 
-The module uses `zod` for schema validation. 
+The module uses `zod` for schema validation.
 
 ### Validation Schemas
 
-| Endpoint             | Schema               |
-|----------------------|----------------------|
-| `/auth/register`     | `registerSchema`     |
-| `/auth/login`        | `loginSchema`        |
+| Endpoint                | Schema                 |
+| ----------------------- | ---------------------- |
+| `/auth/register`        | `registerSchema`       |
+| `/auth/login`           | `loginSchema`          |
 | `/auth/forgot-password` | `forgotPasswordSchema` |
-| `/auth/reset-password` | `resetPasswordSchema` |
-| `/auth/refresh-token` | `refreshTokenSchema` |
+| `/auth/reset-password`  | `resetPasswordSchema`  |
 
 ---
 
@@ -281,6 +437,8 @@ Responses follow a consistent structure.
 
 ## Extensibility
 
-- Replace database adapters (e.g., switch from Mongoose to PostgreSQL)
+- Replace database operations by extending the UserRepository
 - Support additional email providers by implementing new adapters
 - Add custom middleware for specialized use cases
+- Extend the user schema with new migrations
+- Store complex data structures in the `additional_fields` JSONB column

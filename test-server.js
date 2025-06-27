@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import { authRouter } from "./src/routes/auth.routes.js";
-import mongoose from "mongoose";
+import db from "./db/knex.js";
 
 dotenv.config();
 
@@ -28,14 +28,19 @@ app.use("/auth", authRouter);
 
 // Test route
 app.get("/", (req, res) => {
-  res.json({ message: "Auth server is running!" });
+  res.json({ message: "Auth server is running with PostgreSQL!" });
 });
 
-// Connect to MongoDB and start server
+// Connect to PostgreSQL and start server
 const startServer = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log("Connected to MongoDB");
+    // Test the connection
+    await db.raw("SELECT 1");
+    console.log("Connected to PostgreSQL");
+
+    // Run pending migrations
+    await db.migrate.latest();
+    console.log("Database migrations completed");
 
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => {
@@ -43,7 +48,7 @@ const startServer = async () => {
       console.log("\nTest endpoints:");
       console.log("1. Register: POST http://localhost:5000/auth/register");
       console.log(
-        '   Body: { "name": "Test User", "email": "test@example.com", "password": "password123" }'
+        '   Body: { "name": "Test User", "email": "test@example.com", "password": "password123", "additionalFields": { "company": "Test Corp", "phone": "+1234567890" } }'
       );
       console.log("\n2. Login: POST http://localhost:5000/auth/login");
       console.log(
@@ -55,6 +60,9 @@ const startServer = async () => {
         "\n4. Refresh Token: POST http://localhost:5000/auth/refresh-token"
       );
       console.log("   (Requires refresh token cookie)");
+      console.log(
+        "\nDatabase: PostgreSQL with flexible additional_fields support"
+      );
     });
   } catch (error) {
     console.error("Failed to start server:", error);
