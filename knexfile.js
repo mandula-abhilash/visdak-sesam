@@ -12,11 +12,11 @@ const config = {
       database: process.env.PG_DATABASE,
     },
     migrations: {
-      directory: "./db/migrations",
-      tableName: "vd_sesam_knex_migrations",
+      directory: "./src/db/migrations",
+      tableName: "vd_sesam_landlogiq_knex_migrations",
     },
     seeds: {
-      directory: "./db/seeds",
+      directory: "./src/db/seeds",
     },
   },
 
@@ -34,11 +34,11 @@ const config = {
           : false,
     },
     migrations: {
-      directory: "./db/migrations",
-      tableName: "vd_sesam_knex_migrations",
+      directory: "./src/db/migrations",
+      tableName: "vd_sesam_landlogiq_knex_migrations",
     },
     seeds: {
-      directory: "./db/seeds",
+      directory: "./src/db/seeds",
     },
   },
 };

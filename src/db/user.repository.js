@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import db from "../../db/knex.js";
 
-const TABLE_NAME = "vd_sesam_users";
+const TABLE_NAME = "vd_sesam_landlogiq_users";
 
 /**
  * User repository for PostgreSQL operations

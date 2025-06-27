@@ -163,7 +163,7 @@ const registrationData = {
 
 ### Database Schema
 
-The `vd_sesam_users` table includes:
+The `vd_sesam_landlogiq_users` table includes:
 
 - **Core fields**: `id`, `name`, `email`, `password_hash`, `role`
 - **Optional fields**: `business_name`
@@ -353,13 +353,13 @@ npm run migrate:rollback
 
 ```javascript
 export const up = async (knex) => {
-  return knex.schema.alterTable("vd_sesam_users", (table) => {
+  return knex.schema.alterTable("vd_sesam_landlogiq_users", (table) => {
     table.jsonb("preferences").defaultTo("{}");
   });
 };
 
 export const down = async (knex) => {
-  return knex.schema.alterTable("vd_sesam_users", (table) => {
+  return knex.schema.alterTable("vd_sesam_landlogiq_users", (table) => {
     table.dropColumn("preferences");
   });
 };

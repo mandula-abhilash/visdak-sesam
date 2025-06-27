@@ -3,7 +3,7 @@
  * @returns { Promise<void> }
  */
 export const up = async (knex) => {
-  return knex.schema.createTable("vd_sesam_users", (table) => {
+  return knex.schema.createTable("vd_sesam_landlogiq_users", (table) => {
     table.uuid("id").primary().defaultTo(knex.raw("gen_random_uuid()"));
     table.string("name").notNullable();
     table.string("email").notNullable().unique();
@@ -32,5 +32,5 @@ export const up = async (knex) => {
  * @returns { Promise<void> }
  */
 export const down = async (knex) => {
-  return knex.schema.dropTable("vd_sesam_users");
+  return knex.schema.dropTable("vd_sesam_landlogiq_users");
 };
