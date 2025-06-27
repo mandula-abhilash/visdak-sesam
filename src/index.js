@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import db from "../db/knex.js";
+import db from "./db/knex.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { protect, admin } from "./middleware/auth.middleware.js";
 import { emailService } from "./services/email.service.js";

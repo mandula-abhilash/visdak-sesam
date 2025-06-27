@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import db from "../../db/knex.js";
+import db from "./knex.js";
 
 const TABLE_NAME = "vd_sesam_landlogiq_users";
 

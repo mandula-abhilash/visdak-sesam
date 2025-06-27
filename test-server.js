@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import { authRouter } from "./src/routes/auth.routes.js";
-import db from "./db/knex.js";
+import db from "./src/db/knex.js";
 
 dotenv.config();
 
